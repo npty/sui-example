@@ -1,0 +1,20 @@
+{
+  "name": "sui-example",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "scripts": {
+    "sui": "bun run sui-to-evm.ts"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@axelar-network/axelar-cgp-sui": "^1.1.3",
+    "@axelar-network/axelarjs-sdk": "^0.17.2",
+    "@mysten/sui": "^1.24.0",
+    "ethers": "^6.13.5"
+  }
+}
