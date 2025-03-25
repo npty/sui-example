@@ -1,15 +1,23 @@
-# sui-example
+# Sui ITS Example
 
-To install dependencies:
+This is an example of how to send ITS token from Sui to EVM chain.
+
+## Usage
+
+1. Install dependencies:
 
 ```bash
 bun install
 ```
 
-To run:
+2. Setup your `.env` file:
 
 ```bash
-bun run index.ts
+cp .env.example .env
 ```
 
-This project was created using `bun init` in bun v1.1.33. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+3. Send 1 ITS token from Sui to EVM chain:
+
+```bash
+bun sui
+```

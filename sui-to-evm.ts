@@ -7,6 +7,7 @@ import { formatUnits, parseUnits } from "ethers";
 import { TxBuilder } from "@axelar-network/axelar-cgp-sui";
 import type { Keypair } from "@mysten/sui/cryptography";
 import type { SuiContracts } from "./types";
+import type { TransactionResult } from "@mysten/sui/transactions";
 
 // --- Constants ---
 const DESTINATION_CHAIN = "ethereum-sepolia";
@@ -22,54 +23,22 @@ type HopParams = {
 };
 
 // --- Helper Functions ---
-async function getOrCreateChannelId(
-  suiClient: SuiClient,
-  walletAddress: string,
+async function wrapCallsWithChannel(
+  txBuilder: TxBuilder,
   contracts: SuiContracts,
-  suiWallet: Keypair,
-): Promise<string> {
-  const ownedObjects = await suiClient.getOwnedObjects({
-    owner: walletAddress,
-    filter: {
-      MoveModule: {
-        module: "channel",
-        package: contracts.AxelarGateway.address,
-      },
-    },
+  makeCalls: (Channel: TransactionResult) => Promise<void>,
+) {
+  const Channel = await txBuilder.moveCall({
+    target: `${contracts.AxelarGateway.address}::channel::new`,
+    arguments: [],
   });
 
-  const channelObjects = ownedObjects.data.map((channel) => channel.data);
-  const lastChannel = channelObjects[channelObjects.length - 1];
-  let channelId = lastChannel?.objectId;
+  await makeCalls(Channel);
 
-  if (!channelId) {
-    const txBuilder = new TxBuilder(suiClient);
-    const Channel = await txBuilder.moveCall({
-      target: `${contracts.AxelarGateway.address}::channel::new`,
-      arguments: [],
-    });
-
-    txBuilder.tx.transferObjects([Channel], walletAddress);
-
-    const response = await txBuilder.signAndExecute(suiWallet, {
-      showObjectChanges: true,
-    });
-
-    const channelObject = response.objectChanges?.find(
-      (change) =>
-        change.type === "created" &&
-        change.objectType ===
-          `${contracts.AxelarGateway.address}::channel::Channel`,
-    ) as SuiObjectChangeCreated; // Use type assertion
-
-    channelId = channelObject?.objectId;
-  }
-
-  if (!channelId) {
-    throw new Error("Channel ID not found");
-  }
-
-  return channelId;
+  await txBuilder.moveCall({
+    target: `${contracts.AxelarGateway.address}::channel::destroy`,
+    arguments: [Channel],
+  });
 }
 
 async function calculateEstimatedFee(
@@ -81,12 +50,12 @@ async function calculateEstimatedFee(
     {
       sourceChain: sourceChain,
       destinationChain: "axelar",
-      gasLimit: "300000",
+      gasLimit: "400000",
     },
     {
       sourceChain: "axelar",
       destinationChain: destinationChain,
-      gasLimit: "1000000",
+      gasLimit: "1100000",
     },
   ];
   return (await sdk.estimateMultihopFee(hopParams)) as string;
@@ -94,16 +63,16 @@ async function calculateEstimatedFee(
 
 async function prepareAndSendInterchainTransfer(
   txBuilder: TxBuilder,
-  contracts: any,
-  tokenId: any,
-  coin: any,
+  contracts: SuiContracts,
+  tokenId: TransactionResult,
+  coin: TransactionResult,
   destinationChain: string,
   destinationAddress: string,
-  channelId: string,
+  Channel: TransactionResult,
   tokenType: string,
   objectIds: any,
   clockPackageId: string,
-  gas: any,
+  gas: TransactionResult,
   walletAddress: string,
 ) {
   const ticket = await txBuilder.moveCall({
@@ -114,7 +83,7 @@ async function prepareAndSendInterchainTransfer(
       destinationChain,
       destinationAddress,
       "0x", // its token metadata
-      channelId,
+      Channel,
     ],
     typeArguments: [tokenType],
   });
@@ -173,13 +142,6 @@ async function prepareAndSendInterchainTransfer(
     environment: ENVIRONMENT,
   });
 
-  const channelId = await getOrCreateChannelId(
-    suiClient,
-    walletAddress,
-    contracts,
-    suiWallet,
-  );
-
   const fee = await calculateEstimatedFee(sdk, "sui", DESTINATION_CHAIN);
   console.log("Estimated Fee:", `${formatUnits(fee, 9)} SUI`);
 
@@ -197,30 +159,38 @@ async function prepareAndSendInterchainTransfer(
   const coin = coins.data[0];
 
   // Split Gas for paying axelar fee
-  // Split Coin for transferring amount through interchain transfer
   const Gas = txBuilder.tx.splitCoins(txBuilder.tx.gas, [BigInt(fee)]);
+
+  // Split Coin for transferring amount through interchain transfer
   const Coin = txBuilder.tx.splitCoins(coin.coinObjectId, [
     BigInt(UNIT_AMOUNT),
   ]);
 
-  const [TokenId] = await txBuilder.moveCall({
+  // Convert string tokenId to TokenId hot potato object
+  const TokenId = await txBuilder.moveCall({
     target: `${contracts.InterchainTokenService.address}::token_id::from_u256`,
     arguments: [ITS_TOKEN_ID],
   });
 
-  await prepareAndSendInterchainTransfer(
+  await wrapCallsWithChannel(
     txBuilder,
     contracts,
-    TokenId,
-    Coin,
-    DESTINATION_CHAIN,
-    DESTINATION_ADDRESS,
-    channelId,
-    ITS_TOKEN_TYPE,
-    objectIds,
-    CLOCK_PACKAGE_ID,
-    Gas,
-    walletAddress,
+    async (Channel: TransactionResult) => {
+      await prepareAndSendInterchainTransfer(
+        txBuilder,
+        contracts,
+        TokenId,
+        Coin,
+        DESTINATION_CHAIN,
+        DESTINATION_ADDRESS,
+        Channel,
+        ITS_TOKEN_TYPE,
+        objectIds,
+        CLOCK_PACKAGE_ID,
+        Gas,
+        walletAddress,
+      );
+    },
   );
 
   const response = await txBuilder.signAndExecute(suiWallet, {});
