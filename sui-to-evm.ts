@@ -15,7 +15,6 @@ const TOKEN_SYMBOL = "SQD";
 const UNIT_AMOUNT = parseUnits("1", 9);
 const ENVIRONMENT = "testnet" as Environment;
 
-// --- Types ---
 type HopParams = {
   sourceChain: string;
   destinationChain: string;
@@ -197,6 +196,8 @@ async function prepareAndSendInterchainTransfer(
 
   const coin = coins.data[0];
 
+  // Split Gas for paying axelar fee
+  // Split Coin for transferring amount through interchain transfer
   const Gas = txBuilder.tx.splitCoins(txBuilder.tx.gas, [BigInt(fee)]);
   const Coin = txBuilder.tx.splitCoins(coin.coinObjectId, [
     BigInt(UNIT_AMOUNT),
