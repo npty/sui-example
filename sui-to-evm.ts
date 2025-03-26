@@ -1,11 +1,9 @@
 import { SuiClient } from "@mysten/sui/client";
-import type { SuiObjectChangeCreated } from "@mysten/sui/client";
 import { getSuiChainConfig } from "./utils/chains";
 import { getSuiKeypair } from "./utils/suiWallet";
 import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
 import { TxBuilder } from "@axelar-network/axelar-cgp-sui";
-import type { Keypair } from "@mysten/sui/cryptography";
 import type { SuiContracts } from "./types";
 import type { TransactionResult } from "@mysten/sui/transactions";
 
@@ -15,6 +13,13 @@ const DESTINATION_ADDRESS = "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
 const TOKEN_SYMBOL = "SQD";
 const UNIT_AMOUNT = parseUnits("1", 9);
 const ENVIRONMENT = "testnet" as Environment;
+
+const TOKEN_ADDRESS =
+  "0xdec8d72a69438bc872824e70944cd4d89d25c34e3f149993b2d06718d4fd87e2";
+const ITS_TOKEN_ID =
+  "0x42e69c5a9903ba193f3e9214d41b1ad495faace3ca712fb0c9d0c44cc4d31a0c";
+const ITS_TOKEN_TYPE = `${TOKEN_ADDRESS}::${TOKEN_SYMBOL.toLowerCase()}::${TOKEN_SYMBOL.toUpperCase()}`;
+const CLOCK_PACKAGE_ID = "0x6";
 
 type HopParams = {
   sourceChain: string;
@@ -130,13 +135,6 @@ async function prepareAndSendInterchainTransfer(
     gateway: contracts.AxelarGateway.objects.Gateway,
     gasService: contracts.GasService.objects.GasService,
   };
-
-  const tokenAddress =
-    "0xdec8d72a69438bc872824e70944cd4d89d25c34e3f149993b2d06718d4fd87e2";
-  const ITS_TOKEN_TYPE = `${tokenAddress}::${TOKEN_SYMBOL.toLowerCase()}::${TOKEN_SYMBOL.toUpperCase()}`;
-  const ITS_TOKEN_ID =
-    "0x42e69c5a9903ba193f3e9214d41b1ad495faace3ca712fb0c9d0c44cc4d31a0c"; //ItsToken.objects.TokenId
-  const CLOCK_PACKAGE_ID = "0x6";
 
   const sdk = new AxelarQueryAPI({
     environment: ENVIRONMENT,
