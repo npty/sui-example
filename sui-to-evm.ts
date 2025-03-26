@@ -9,9 +9,10 @@ import type { TransactionResult } from "@mysten/sui/transactions";
 
 // --- Constants ---
 const DESTINATION_CHAIN = "ethereum-sepolia";
-const DESTINATION_ADDRESS = "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
+const DESTINATION_ADDRESS =
+  process.argv[2] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
 const TOKEN_SYMBOL = "SQD";
-const UNIT_AMOUNT = parseUnits("1", 9);
+const UNIT_AMOUNT = parseUnits(process.argv[3] || "1", 9);
 const ENVIRONMENT = "testnet" as Environment;
 
 const TOKEN_ADDRESS =
@@ -143,6 +144,9 @@ async function prepareAndSendInterchainTransfer(
   const fee = await calculateEstimatedFee(sdk, "sui", DESTINATION_CHAIN);
   console.log("Estimated Fee:", `${formatUnits(fee, 9)} SUI`);
 
+  console.log(
+    `Sending ${formatUnits(UNIT_AMOUNT, 9)} ${TOKEN_SYMBOL} to ${DESTINATION_ADDRESS} on ${DESTINATION_CHAIN}`,
+  );
   const txBuilder = new TxBuilder(suiClient);
 
   const coins = await suiClient.getCoins({
