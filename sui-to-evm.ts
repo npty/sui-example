@@ -5,6 +5,7 @@ import { getSuiChainConfig } from "./utils/chains";
 import { getSuiKeypair } from "./utils/suiWallet";
 import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
+import { getItsCoin } from "./utils/coin";
 
 // --- Constants ---
 const DESTINATION_CHAIN = "ethereum-sepolia";
@@ -25,28 +26,6 @@ type HopParams = {
   sourceChain: string;
   destinationChain: string;
   gasLimit: string;
-};
-
-type SuiContracts = {
-  InterchainTokenService: {
-    address: string;
-    objects: {
-      InterchainTokenService: string;
-      InterchainTokenServicev0: string;
-    };
-  };
-  AxelarGateway: {
-    address: string;
-    objects: {
-      Gateway: string;
-    };
-  };
-  GasService: {
-    address: string;
-    objects: {
-      GasService: string;
-    };
-  };
 };
 
 // --- Helper Functions ---
@@ -73,7 +52,7 @@ async function calculateEstimatedFee(
 // --- Main Execution ---
 (async () => {
   const chainConfig = await getSuiChainConfig();
-  const contracts = chainConfig.config.contracts as SuiContracts;
+  const contracts = chainConfig.config.contracts;
 
   const suiClient = new SuiClient({ url: chainConfig.config.rpc[0] });
   const suiWallet = getSuiKeypair();
@@ -105,16 +84,11 @@ async function calculateEstimatedFee(
     `Sending ${formatUnits(UNIT_AMOUNT, 9)} ${TOKEN_SYMBOL} to ${DESTINATION_ADDRESS} on ${DESTINATION_CHAIN}`,
   );
 
-  const coins = await suiClient.getCoins({
-    owner: walletAddress,
-    coinType: ITS_TOKEN_TYPE,
-  });
-
-  if (coins.data.length === 0) {
-    throw new Error("No ITS coins found");
-  }
-
-  const coin = coins.data[0];
+  const itsCoinObjectId = await getItsCoin(
+    suiClient,
+    walletAddress,
+    ITS_TOKEN_TYPE,
+  );
 
   // Create a new transaction block
   const tx = new Transaction();
@@ -136,7 +110,7 @@ async function calculateEstimatedFee(
   const gas = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(fee))]);
 
   // Split Coin for transferring amount through interchain transfer
-  const transferCoin = tx.splitCoins(tx.object(coin.coinObjectId), [
+  const transferCoin = tx.splitCoins(tx.object(itsCoinObjectId), [
     tx.pure.u64(BigInt(UNIT_AMOUNT.toString())),
   ]);
 
