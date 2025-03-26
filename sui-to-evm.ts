@@ -15,6 +15,7 @@ const TOKEN_SYMBOL = "SQD";
 const UNIT_AMOUNT = parseUnits(process.argv[3] || "1", 9);
 const ENVIRONMENT = "testnet" as Environment;
 
+// SQD token
 const TOKEN_ADDRESS =
   "0xdec8d72a69438bc872824e70944cd4d89d25c34e3f149993b2d06718d4fd87e2";
 const ITS_TOKEN_ID =
