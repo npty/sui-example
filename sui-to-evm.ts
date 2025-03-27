@@ -4,11 +4,7 @@ import { getSuiChainConfig } from "./utils/chains";
 import { getSuiKeypair } from "./utils/suiWallet";
 import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
-import {
-  InterchainTokenService,
-  AxelarGateway,
-  GasService,
-} from "@axelarjs/sui";
+import SuiTypedContracts from "@axelarjs/sui";
 import { getItsCoin } from "./utils/coin";
 
 // --- Constants ---
@@ -18,6 +14,8 @@ const DESTINATION_ADDRESS =
 const TOKEN_SYMBOL = "SQD";
 const UNIT_AMOUNT = parseUnits(process.argv[3] || "1", 9);
 const ENVIRONMENT = "testnet" as Environment;
+const { InterchainTokenService, AxelarGateway, GasService } =
+  SuiTypedContracts[ENVIRONMENT];
 
 // SQD token
 const TOKEN_ADDRESS =
