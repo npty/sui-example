@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@axelar-network/axelarjs-sdk": "^0.17.2",
-    "@mysten/sui": "^1.24.0",
+    "@axelarjs/sui": "0.0.0-snapshot.3a56d36",
+    "@mysten/sui": "~1.24.0",
     "ethers": "^6.13.5"
   }
 }
