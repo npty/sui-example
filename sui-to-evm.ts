@@ -1,11 +1,11 @@
 import { SuiClient } from "@mysten/sui/client";
+import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/bcs";
 import { getSuiChainConfig } from "./utils/chains";
 import { getSuiKeypair } from "./utils/suiWallet";
 import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
-import { TxBuilder } from "@axelar-network/axelar-cgp-sui";
-import type { SuiContracts } from "./types";
-import type { TransactionResult } from "@mysten/sui/transactions";
+import { getItsCoin } from "./utils/coin";
 
 // --- Constants ---
 const DESTINATION_CHAIN = "ethereum-sepolia";
@@ -15,6 +15,7 @@ const TOKEN_SYMBOL = "SQD";
 const UNIT_AMOUNT = parseUnits(process.argv[3] || "1", 9);
 const ENVIRONMENT = "testnet" as Environment;
 
+// SQD token
 const TOKEN_ADDRESS =
   "0xdec8d72a69438bc872824e70944cd4d89d25c34e3f149993b2d06718d4fd87e2";
 const ITS_TOKEN_ID =
@@ -29,24 +30,6 @@ type HopParams = {
 };
 
 // --- Helper Functions ---
-async function wrapCallsWithChannel(
-  txBuilder: TxBuilder,
-  contracts: SuiContracts,
-  makeCalls: (Channel: TransactionResult) => Promise<void>,
-) {
-  const Channel = await txBuilder.moveCall({
-    target: `${contracts.AxelarGateway.address}::channel::new`,
-    arguments: [],
-  });
-
-  await makeCalls(Channel);
-
-  await txBuilder.moveCall({
-    target: `${contracts.AxelarGateway.address}::channel::destroy`,
-    arguments: [Channel],
-  });
-}
-
 async function calculateEstimatedFee(
   sdk: AxelarQueryAPI,
   sourceChain: string,
@@ -67,53 +50,7 @@ async function calculateEstimatedFee(
   return (await sdk.estimateMultihopFee(hopParams)) as string;
 }
 
-async function prepareAndSendInterchainTransfer(
-  txBuilder: TxBuilder,
-  contracts: SuiContracts,
-  tokenId: TransactionResult,
-  coin: TransactionResult,
-  destinationChain: string,
-  destinationAddress: string,
-  Channel: TransactionResult,
-  tokenType: string,
-  objectIds: any,
-  clockPackageId: string,
-  gas: TransactionResult,
-  walletAddress: string,
-) {
-  const ticket = await txBuilder.moveCall({
-    target: `${contracts.InterchainTokenService.address}::interchain_token_service::prepare_interchain_transfer`,
-    arguments: [
-      tokenId,
-      coin,
-      destinationChain,
-      destinationAddress,
-      "0x", // its token metadata
-      Channel,
-    ],
-    typeArguments: [tokenType],
-  });
-
-  const messageTicket = await txBuilder.moveCall({
-    target: `${contracts.InterchainTokenService.address}::interchain_token_service::send_interchain_transfer`,
-    arguments: [objectIds.its, ticket, clockPackageId],
-    typeArguments: [tokenType],
-  });
-
-  await txBuilder.moveCall({
-    target: `${contracts.GasService.address}::gas_service::pay_gas`,
-    arguments: [objectIds.gasService, messageTicket, gas, walletAddress, "0x"],
-    typeArguments: [`0x2::sui::SUI`],
-  });
-
-  await txBuilder.moveCall({
-    target: `${contracts.AxelarGateway.address}::gateway::send_message`,
-    arguments: [objectIds.gateway, messageTicket],
-  });
-}
-
 // --- Main Execution ---
-
 (async () => {
   const chainConfig = await getSuiChainConfig();
   const contracts = chainConfig.config.contracts;
@@ -147,55 +84,104 @@ async function prepareAndSendInterchainTransfer(
   console.log(
     `Sending ${formatUnits(UNIT_AMOUNT, 9)} ${TOKEN_SYMBOL} to ${DESTINATION_ADDRESS} on ${DESTINATION_CHAIN}`,
   );
-  const txBuilder = new TxBuilder(suiClient);
 
-  const coins = await suiClient.getCoins({
-    owner: walletAddress,
-    coinType: ITS_TOKEN_TYPE,
-  });
-
-  if (coins.data.length === 0) {
-    throw new Error("No ITS coins found");
-  }
-
-  const coin = coins.data[0];
-
-  // Split Gas for paying axelar fee
-  const Gas = txBuilder.tx.splitCoins(txBuilder.tx.gas, [BigInt(fee)]);
-
-  // Split Coin for transferring amount through interchain transfer
-  const Coin = txBuilder.tx.splitCoins(coin.coinObjectId, [
-    BigInt(UNIT_AMOUNT),
-  ]);
-
-  // Convert string tokenId to TokenId hot potato object
-  const TokenId = await txBuilder.moveCall({
-    target: `${contracts.InterchainTokenService.address}::token_id::from_u256`,
-    arguments: [ITS_TOKEN_ID],
-  });
-
-  await wrapCallsWithChannel(
-    txBuilder,
-    contracts,
-    async (Channel: TransactionResult) => {
-      await prepareAndSendInterchainTransfer(
-        txBuilder,
-        contracts,
-        TokenId,
-        Coin,
-        DESTINATION_CHAIN,
-        DESTINATION_ADDRESS,
-        Channel,
-        ITS_TOKEN_TYPE,
-        objectIds,
-        CLOCK_PACKAGE_ID,
-        Gas,
-        walletAddress,
-      );
-    },
+  const itsCoinObjectId = await getItsCoin(
+    suiClient,
+    walletAddress,
+    ITS_TOKEN_TYPE,
   );
 
-  const response = await txBuilder.signAndExecute(suiWallet, {});
+  // Create a new transaction block
+  const tx = new Transaction();
+
+  // Serialize destination chain and address using BCS
+  const destChainSerialized = bcs
+    .string()
+    .serialize(DESTINATION_CHAIN)
+    .toBytes();
+  const destAddressSerialized = bcs
+    .string()
+    .serialize(DESTINATION_ADDRESS)
+    .toBytes();
+
+  // Serialize empty metadata as a byte vector
+  const emptyMetadata = bcs.byteVector().serialize(new Uint8Array()).toBytes();
+
+  // Split Gas for paying axelar fee
+  const gas = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(fee))]);
+
+  // Split Coin for transferring amount through interchain transfer
+  const transferCoin = tx.splitCoins(tx.object(itsCoinObjectId), [
+    tx.pure.u64(BigInt(UNIT_AMOUNT.toString())),
+  ]);
+
+  // Create a new channel
+  const channel = tx.moveCall({
+    target: `${contracts.AxelarGateway.address}::channel::new`,
+    arguments: [],
+  });
+
+  const tokenId = tx.moveCall({
+    target: `${contracts.InterchainTokenService.address}::token_id::from_u256`,
+    arguments: [bcs.u256().serialize(ITS_TOKEN_ID)],
+  });
+
+  // Prepare interchain transfer
+  const ticket = tx.moveCall({
+    target: `${contracts.InterchainTokenService.address}::interchain_token_service::prepare_interchain_transfer`,
+    arguments: [
+      tokenId,
+      transferCoin,
+      tx.pure(destChainSerialized),
+      tx.pure(destAddressSerialized),
+      tx.pure(emptyMetadata),
+      channel,
+    ],
+    typeArguments: [ITS_TOKEN_TYPE],
+  });
+
+  // Send interchain transfer
+  const messageTicket = tx.moveCall({
+    target: `${contracts.InterchainTokenService.address}::interchain_token_service::send_interchain_transfer`,
+    arguments: [tx.object(objectIds.its), ticket, tx.object(CLOCK_PACKAGE_ID)],
+    typeArguments: [ITS_TOKEN_TYPE],
+  });
+
+  // Pay gas for the transfer
+  tx.moveCall({
+    target: `${contracts.GasService.address}::gas_service::pay_gas`,
+    arguments: [
+      tx.object(objectIds.gasService),
+      messageTicket,
+      gas,
+      tx.pure.address(walletAddress),
+      tx.pure(emptyMetadata),
+    ],
+    typeArguments: ["0x2::sui::SUI"],
+  });
+
+  // Send the message
+  tx.moveCall({
+    target: `${contracts.AxelarGateway.address}::gateway::send_message`,
+    arguments: [tx.object(objectIds.gateway), messageTicket],
+  });
+
+  // Destroy the channel
+  tx.moveCall({
+    target: `${contracts.AxelarGateway.address}::channel::destroy`,
+    arguments: [channel],
+  });
+
+  // Sign and execute the transaction
+  const response = await suiClient.signAndExecuteTransaction({
+    transaction: tx,
+    signer: suiWallet,
+    options: {
+      showEffects: true,
+      showObjectChanges: true,
+    },
+  });
+
   console.log(
     "Transaction Hash:",
     `${chainConfig.blockExplorers[0].url}/tx/${response.digest}`,
