@@ -1,10 +1,10 @@
 import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { bcs } from "@mysten/bcs";
 import { getSuiChainConfig } from "./utils/chains";
 import { getSuiKeypair } from "./utils/suiWallet";
 import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
+import SuiTypedContracts from "@axelarjs/sui";
 import { getItsCoin } from "./utils/coin";
 
 // --- Constants ---
@@ -14,6 +14,8 @@ const DESTINATION_ADDRESS =
 const TOKEN_SYMBOL = "SQD";
 const UNIT_AMOUNT = parseUnits(process.argv[3] || "1", 9);
 const ENVIRONMENT = "testnet" as Environment;
+const { InterchainTokenService, AxelarGateway, GasService } =
+  SuiTypedContracts[ENVIRONMENT];
 
 // SQD token
 const TOKEN_ADDRESS =
@@ -94,83 +96,56 @@ async function calculateEstimatedFee(
   // Create a new transaction block
   const tx = new Transaction();
 
-  // Serialize destination chain and address using BCS
-  const destChainSerialized = bcs
-    .string()
-    .serialize(DESTINATION_CHAIN)
-    .toBytes();
-  const destAddressSerialized = bcs
-    .string()
-    .serialize(DESTINATION_ADDRESS)
-    .toBytes();
-
-  // Serialize empty metadata as a byte vector
-  const emptyMetadata = bcs.byteVector().serialize(new Uint8Array()).toBytes();
-
   // Split Gas for paying axelar fee
-  const gas = tx.splitCoins(tx.gas, [tx.pure.u64(BigInt(fee))]);
+  const gas = tx.splitCoins(tx.gas, [BigInt(fee)]);
 
   // Split Coin for transferring amount through interchain transfer
-  const transferCoin = tx.splitCoins(tx.object(itsCoinObjectId), [
-    tx.pure.u64(BigInt(UNIT_AMOUNT.toString())),
-  ]);
+  const transferCoin = tx.splitCoins(tx.object(itsCoinObjectId), [UNIT_AMOUNT]);
 
   // Create a new channel
-  const channel = tx.moveCall({
-    target: `${contracts.AxelarGateway.address}::channel::new`,
-    arguments: [],
-  });
-
-  const tokenId = tx.moveCall({
-    target: `${contracts.InterchainTokenService.address}::token_id::from_u256`,
-    arguments: [bcs.u256().serialize(ITS_TOKEN_ID)],
-  });
+  const channel = AxelarGateway.channel.builder.new$(tx, []);
+  const tokenId = InterchainTokenService.token_id.builder.fromU256(tx, [
+    BigInt(ITS_TOKEN_ID),
+  ]);
 
   // Prepare interchain transfer
-  const ticket = tx.moveCall({
-    target: `${contracts.InterchainTokenService.address}::interchain_token_service::prepare_interchain_transfer`,
-    arguments: [
-      tokenId,
-      transferCoin,
-      tx.pure(destChainSerialized),
-      tx.pure(destAddressSerialized),
-      tx.pure(emptyMetadata),
-      channel,
-    ],
-    typeArguments: [ITS_TOKEN_TYPE],
-  });
+  const ticket =
+    InterchainTokenService.interchain_token_service.builder.prepareInterchainTransfer(
+      tx,
+      [
+        tokenId,
+        transferCoin,
+        DESTINATION_CHAIN,
+        tx.object(DESTINATION_ADDRESS),
+        tx.object("0x"),
+        channel,
+      ],
+      [ITS_TOKEN_TYPE],
+    );
 
   // Send interchain transfer
-  const messageTicket = tx.moveCall({
-    target: `${contracts.InterchainTokenService.address}::interchain_token_service::send_interchain_transfer`,
-    arguments: [tx.object(objectIds.its), ticket, tx.object(CLOCK_PACKAGE_ID)],
-    typeArguments: [ITS_TOKEN_TYPE],
-  });
+  const messageTicket =
+    InterchainTokenService.interchain_token_service.builder.sendInterchainTransfer(
+      tx,
+      [objectIds.its, ticket, CLOCK_PACKAGE_ID],
+      [ITS_TOKEN_TYPE],
+    );
 
   // Pay gas for the transfer
-  tx.moveCall({
-    target: `${contracts.GasService.address}::gas_service::pay_gas`,
-    arguments: [
-      tx.object(objectIds.gasService),
-      messageTicket,
-      gas,
-      tx.pure.address(walletAddress),
-      tx.pure(emptyMetadata),
-    ],
-    typeArguments: ["0x2::sui::SUI"],
-  });
+  GasService.gas_service.builder.payGas(
+    tx,
+    [objectIds.gasService, messageTicket, gas, walletAddress, tx.object("0x")],
+    ["0x2::sui::SUI"],
+  );
 
   // Send the message
-  tx.moveCall({
-    target: `${contracts.AxelarGateway.address}::gateway::send_message`,
-    arguments: [tx.object(objectIds.gateway), messageTicket],
-  });
+  AxelarGateway.gateway.builder.sendMessage(tx, [
+    objectIds.gateway,
+    messageTicket,
+  ]);
 
   // Destroy the channel
-  tx.moveCall({
-    target: `${contracts.AxelarGateway.address}::channel::destroy`,
-    arguments: [channel],
-  });
+  AxelarGateway.channel.builder.destroy(tx, [channel]);
 
   // Sign and execute the transaction
   const response = await suiClient.signAndExecuteTransaction({
