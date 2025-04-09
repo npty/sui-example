@@ -12,7 +12,6 @@ export interface SignAndSubmitArgs {
  */
 function handleReceipt(receipt: any) {
   const result = receipt.engine_result;
-  console.log(result);
   if (result !== "tesSUCCESS") {
     console.error(
       "Transaction failed",
@@ -37,9 +36,7 @@ function handleReceipt(receipt: any) {
 export async function signAndSubmitTx(
   client: Client,
   signer: Wallet,
-  txType: string,
   fields: Record<string, any> = {},
-  args: SignAndSubmitArgs = {},
 ): Promise<SubmitResponse> {
   // Ensure client is connected
   if (!client.isConnected()) {
@@ -47,25 +44,17 @@ export async function signAndSubmitTx(
   }
 
   // 1. Determine Fee
-  let calculatedFee: string | undefined = args.fee;
-  if (!calculatedFee) {
-    const feeResponse = await client.request({ command: "fee" });
-    const baseFee = feeResponse.result.drops.open_ledger_fee;
-    calculatedFee = String(Number(baseFee) * 2); // Adjust multiplier based on actual signer count if needed
-  }
+  const feeResponse = await client.request({ command: "fee" });
+  const calculatedFee = feeResponse.result.drops.open_ledger_fee;
 
   // 2. Build Transaction
   const txJson: any = {
-    TransactionType: txType,
-    Account: args.account ?? signer.classicAddress,
     ...fields,
   };
   if (calculatedFee) {
     // Only add fee if explicitly provided or calculated for multisig
     txJson.Fee = calculatedFee;
   }
-
-  console.log("txJson", txJson);
 
   // Autofill transaction details (like sequence number)
   const preparedTx = await client.autofill(txJson);
@@ -76,7 +65,7 @@ export async function signAndSubmitTx(
   // 4. Submit Transaction
   const result = await client.submit(signedTx.tx_blob);
 
-  // 5. Handle Receipt
+  // 5. Check if the transaction was successful
   handleReceipt(result.result);
 
   return result;
