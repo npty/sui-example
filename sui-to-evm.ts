@@ -1,6 +1,6 @@
 import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { getSuiChainConfig } from "./sui/chains";
+import { getSuiChainConfig } from "./common/chains";
 import { getSuiKeypair } from "./sui/suiWallet";
 import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";

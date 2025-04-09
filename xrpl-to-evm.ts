@@ -4,16 +4,19 @@ import { getBalance, hex, parseToken } from "./xrpl/utils";
 import { fundWallet, getWallet } from "./xrpl/wallet";
 import xrpl from "xrpl";
 
-// rpc url for xrpl testnet
-const rpcUrl = "wss://s.altnet.rippletest.net:51233";
+// Parse command line arguments
 const destinationAddress =
   process.argv[2] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
-const transferAmount = process.argv[3] || "0.1";
-const privateKey = process.env.XRPL_PRIVATE_KEY || "";
+const destinationChain = process.argv[3] || "ethereum-sepolia";
+const transferAmount = process.argv[4] || "0.1";
+const xrplWalletSeed = process.env.XRPL_SEED || "";
 
 // Input validations
-if (!privateKey) {
-  throw new Error("XRPL_PRIVATE_KEY is not set");
+if (!xrplWalletSeed) {
+  throw new Error("XRPL_SEED is not set");
+}
+if (!destinationChain) {
+  throw new Error("Invalid destination chain");
 }
 if (!destinationAddress) {
   throw new Error("Invalid destination address");
@@ -24,12 +27,16 @@ if (!transferAmount) {
 
 const wallet = getWallet({
   walletKeyType: xrpl.ECDSA.secp256k1,
-  privateKey,
+  privateKey: xrplWalletSeed,
 });
 
 console.log("Wallet Address:", wallet.address);
 
+// RPC url for xrpl testnet
+const rpcUrl = "wss://s.altnet.rippletest.net:51233";
 const client = new xrpl.Client(rpcUrl);
+
+// Connect to the WSS server
 await client.connect();
 
 const balance = await getBalance(client, wallet.address);
@@ -82,4 +89,5 @@ const response = await signAndSubmitTx(client, wallet, {
 
 console.log("Submitted Transaction", response.result.tx_json.hash);
 
+// Disconnect from the WSS server
 await client.disconnect();

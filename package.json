@@ -6,7 +6,7 @@
     "@types/bun": "latest"
   },
   "scripts": {
-    "sui": "bun run sui-to-evm.ts",
+    "sui:start": "bun run sui-to-evm.ts",
     "xrpl:wallet": "bun run gen-xrpl-wallet.ts",
     "xrpl:start": "bun run xrpl-to-evm.ts"
   },
