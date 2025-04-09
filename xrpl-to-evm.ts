@@ -65,7 +65,7 @@ const fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
 console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
 
 const response = await signAndSubmitTx(client, wallet, {
-  PaymentType: "Payment",
+  TransactionType: "Payment",
   Account: wallet.address,
   Destination: xrplChainConfig.config.contracts.InterchainTokenService.address,
   Amount: parseToken("XRP", transferAmount),
@@ -84,7 +84,7 @@ const response = await signAndSubmitTx(client, wallet, {
     },
     {
       memoType: hex("gas_fee_amount"),
-      memoData: hex("3000000"),
+      memoData: hex(fee.toString()),
     },
     {
       memoType: hex("payload"),

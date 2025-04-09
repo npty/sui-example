@@ -10,7 +10,7 @@ export interface SignAndSubmitArgs {
  * Basic receipt handling. Throws an error on failure.
  * @param receipt The result object from the transaction submission.
  */
-function handleReceipt(receipt: any) {
+function checkTransactionResult(receipt: any) {
   const result = receipt.engine_result;
   if (result !== "tesSUCCESS") {
     console.error(
@@ -21,7 +21,6 @@ function handleReceipt(receipt: any) {
       `Transaction failed: ${result} - ${receipt.engine_result_message}`,
     );
   }
-  console.log(`Transaction successful. Hash:`, receipt.tx_json.hash);
 }
 
 /**
@@ -66,7 +65,7 @@ export async function signAndSubmitTx(
   const result = await client.submit(signedTx.tx_blob);
 
   // 5. Check if the transaction was successful
-  handleReceipt(result.result);
+  checkTransactionResult(result.result);
 
   return result;
 }
