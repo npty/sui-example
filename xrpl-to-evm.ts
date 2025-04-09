@@ -5,6 +5,7 @@ import { signAndSubmitTx } from "./xrpl/tx";
 import { getBalance, hex, parseToken } from "./xrpl/utils";
 import { fundWallet, getWallet } from "./xrpl/wallet";
 import xrpl from "xrpl";
+import { environment } from "./common/env";
 
 // Parse command line arguments
 const destinationAddress =
@@ -12,6 +13,8 @@ const destinationAddress =
 const destinationChain = process.argv[3] || "ethereum-sepolia";
 const transferAmount = process.argv[4] || "0.1";
 const xrplWalletSeed = process.env.XRPL_SEED || "";
+
+console.log("Environment:", environment);
 
 // Input validations
 if (!xrplWalletSeed) {

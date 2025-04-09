@@ -2,11 +2,12 @@ import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 import { getSuiChainConfig } from "./common/chains";
 import { getSuiKeypair } from "./sui/suiWallet";
-import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
+import { Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
 import SuiTypedContracts from "@axelarjs/sui";
 import { getItsCoin } from "./sui/coin";
 import { calculateEstimatedFee } from "./common/gasEstimation";
+import { environment } from "./common/env";
 
 // --- Constants ---
 const DESTINATION_CHAIN = "ethereum-sepolia";
@@ -17,6 +18,8 @@ const UNIT_AMOUNT = parseUnits(process.argv[3] || "1", 9);
 const ENVIRONMENT = "testnet" as Environment;
 const { InterchainTokenService, AxelarGateway, GasService } =
   SuiTypedContracts[ENVIRONMENT];
+
+console.log("Environment:", environment);
 
 // SQD token
 const TOKEN_ADDRESS =

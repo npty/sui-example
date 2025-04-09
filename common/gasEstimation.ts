@@ -1,4 +1,5 @@
-import { AxelarQueryAPI, type Environment } from "@axelar-network/axelarjs-sdk";
+import { AxelarQueryAPI } from "@axelar-network/axelarjs-sdk";
+import { environment } from "../common/env";
 
 export type HopParams = {
   sourceChain: string;
@@ -6,14 +7,12 @@ export type HopParams = {
   gasLimit: string;
 };
 
-const environment = process.env.ENVIRONMENT || "testnet";
-
 export async function calculateEstimatedFee(
   sourceChain: string,
   destinationChain: string,
 ): Promise<string> {
   const sdk = new AxelarQueryAPI({
-    environment: environment as Environment,
+    environment,
   });
 
   const hopParams: HopParams[] = [
