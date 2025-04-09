@@ -1,4 +1,6 @@
+import { formatUnits } from "ethers";
 import { getXrplChainConfig } from "./common/chains";
+import { calculateEstimatedFee } from "./common/gasEstimation";
 import { signAndSubmitTx } from "./xrpl/tx";
 import { getBalance, hex, parseToken } from "./xrpl/utils";
 import { fundWallet, getWallet } from "./xrpl/wallet";
@@ -57,6 +59,10 @@ if (parseInt(balance) < parseInt(parseToken("XRP", transferAmount))) {
 
 // Get axelar chain config from s3
 const xrplChainConfig = await getXrplChainConfig();
+
+// Estimate the fee
+const fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
+console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
 
 const response = await signAndSubmitTx(client, wallet, {
   PaymentType: "Payment",
