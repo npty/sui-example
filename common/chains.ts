@@ -1,4 +1,4 @@
-import type { SuiChainConfig } from "../types";
+import type { SuiChainConfig, XrplChainConfig } from "./types";
 
 export async function getChainConfig() {
   return fetch(
@@ -15,4 +15,14 @@ export async function getSuiChainConfig(): Promise<SuiChainConfig> {
   ) as string;
 
   return chainConfig.chains[suiChainId];
+}
+
+export async function getXrplChainConfig(): Promise<XrplChainConfig> {
+  const chainConfig = await getChainConfig();
+
+  const xrplChainId = Object.keys(chainConfig.chains).find(
+    (chain) => chainConfig.chains[chain].chainType === "xrpl",
+  ) as string;
+
+  return chainConfig.chains[xrplChainId];
 }

@@ -1,11 +1,11 @@
 import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { getSuiChainConfig } from "./utils/chains";
-import { getSuiKeypair } from "./utils/suiWallet";
+import { getSuiChainConfig } from "./sui/chains";
+import { getSuiKeypair } from "./sui/suiWallet";
 import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
 import SuiTypedContracts from "@axelarjs/sui";
-import { getItsCoin } from "./utils/coin";
+import { getItsCoin } from "./sui/coin";
 
 // --- Constants ---
 const DESTINATION_CHAIN = "ethereum-sepolia";

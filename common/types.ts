@@ -25,3 +25,13 @@ export type SuiChainConfig = {
     contracts: SuiContracts;
   };
 };
+
+export type XrplChainConfig = {
+  id: string;
+  chainType: string;
+  blockExplorers: BlockExplorer[];
+  config: {
+    rpc: string[];
+    contracts: Record<string, BaseContract>;
+  };
+};
