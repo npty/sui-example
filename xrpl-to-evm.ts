@@ -54,7 +54,7 @@ if (parseInt(balance) < parseInt(parseToken("XRP", transferAmount))) {
 
   // Check the updated balance
   const balance = await getBalance(client, wallet.address);
-  console.log("Wallet Balance:", balance);
+  console.log("Wallet Balance:", xrpl.dropsToXrp(balance), "XRP");
 }
 
 // Get axelar chain config from s3
@@ -63,6 +63,7 @@ const xrplChainConfig = await getXrplChainConfig();
 // Estimate the fee
 const fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
 console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
+console.log("Send Amount:", `${transferAmount} XRP`);
 
 const response = await signAndSubmitTx(client, wallet, {
   TransactionType: "Payment",
@@ -80,7 +81,7 @@ const response = await signAndSubmitTx(client, wallet, {
     },
     {
       memoType: hex("destination_chain"),
-      memoData: hex("ethereum-sepolia"),
+      memoData: hex(destinationChain),
     },
     {
       memoType: hex("gas_fee_amount"),
