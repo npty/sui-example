@@ -1,4 +1,3 @@
-import { formatUnits } from "ethers";
 import { getXrplChainConfig } from "./common/chains";
 import { calculateEstimatedFee } from "./common/gasEstimation";
 import { signAndSubmitTx } from "./xrpl/tx";
@@ -63,6 +62,8 @@ if (parseInt(balance) < parseInt(parseToken("XRP", transferAmount))) {
 // Get axelar chain config from s3
 const xrplChainConfig = await getXrplChainConfig();
 
+console.log("xrplChainConfig");
+
 // Estimate the fee
 const fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
 console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
@@ -73,26 +74,36 @@ const response = await signAndSubmitTx(client, wallet, {
   Account: wallet.address,
   Destination: xrplChainConfig.config.contracts.InterchainTokenService.address,
   Amount: parseToken("XRP", transferAmount),
-  memos: [
+  Memos: [
     {
-      memoType: hex("type"),
-      memoData: hex("interchain_transfer"),
+      Memo: {
+        MemoType: hex("type"),
+        MemoData: hex("interchain_transfer"),
+      },
     },
     {
-      memoType: hex("destination_address"),
-      memoData: hex(destinationAddress.replace("0x", "")),
+      Memo: {
+        MemoType: hex("destination_address"),
+        MemoData: hex(destinationAddress.replace("0x", "")),
+      },
     },
     {
-      memoType: hex("destination_chain"),
-      memoData: hex(destinationChain),
+      Memo: {
+        MemoType: hex("destination_chain"),
+        MemoData: hex(destinationChain),
+      },
     },
     {
-      memoType: hex("gas_fee_amount"),
-      memoData: hex(fee.toString()),
+      Memo: {
+        MemoType: hex("gas_fee_amount"),
+        MemoData: hex(fee.toString()),
+      },
     },
     {
-      memoType: hex("payload"),
-      memoData: hex("0x"),
+      Memo: {
+        MemoType: hex("payload"),
+        MemoData: hex("0x"),
+      },
     },
   ],
 });
