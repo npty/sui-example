@@ -6,7 +6,9 @@
     "@types/bun": "latest"
   },
   "scripts": {
-    "sui": "bun run sui-to-evm.ts"
+    "sui:start": "bun run sui-to-evm.ts",
+    "xrpl:wallet": "bun run gen-xrpl-wallet.ts",
+    "xrpl:start": "bun run xrpl-to-evm.ts"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -15,6 +17,8 @@
     "@axelar-network/axelarjs-sdk": "^0.17.2",
     "@axelarjs/sui": "0.0.0-snapshot.8996e1c",
     "@mysten/sui": "~1.24.0",
-    "ethers": "^6.13.5"
+    "ethers": "^6.13.5",
+    "ripple-address-codec": "^5.0.0",
+    "xrpl": "^4.2.0"
   }
 }
