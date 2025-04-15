@@ -1,8 +1,8 @@
-# Sui ITS Example
+# ITS Example
 
 This is an example of how to send ITS token from Sui to EVM chain.
 
-## Usage
+## Preparation
 
 1. Install dependencies:
 
@@ -16,8 +16,30 @@ bun install
 cp .env.example .env
 ```
 
-3. Send 1 ITS token from Sui to EVM chain:
+For XRPL, you need to set `XRPL_SEED` in `.env` file. You can generate a wallet seed by running:
 
 ```bash
-bun sui
+bun xrpl:wallet
 ```
+
+For Sui, you need to set `SUI_PRIVATE_KEY` in `.env` file.
+
+## Sui ITS Transfer
+
+Send 1 ITS token from Sui to EVM chain:
+
+```bash
+bun sui:start <destination-address> <amount>
+```
+
+> Note: the destination address and amount are optional.
+
+## XRPL ITS Transfer
+
+Send XRP from XRPL to other chain
+
+```bash
+bun xrpl:start <destination-address> <destination-chain> <amount>
+```
+
+> Note: the destination chain and amount are optional. destination-address is required.

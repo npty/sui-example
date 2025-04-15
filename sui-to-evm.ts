@@ -1,11 +1,13 @@
 import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { getSuiChainConfig } from "./utils/chains";
-import { getSuiKeypair } from "./utils/suiWallet";
-import { AxelarQueryAPI, Environment } from "@axelar-network/axelarjs-sdk";
+import { getSuiChainConfig } from "./common/chains";
+import { getSuiKeypair } from "./sui/suiWallet";
+import { Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
 import SuiTypedContracts from "@axelarjs/sui";
-import { getItsCoin } from "./utils/coin";
+import { getItsCoin } from "./sui/coin";
+import { calculateEstimatedFee } from "./common/gasEstimation";
+import { environment } from "./common/env";
 
 // --- Constants ---
 const DESTINATION_CHAIN = "ethereum-sepolia";
@@ -17,6 +19,8 @@ const ENVIRONMENT = "testnet" as Environment;
 const { InterchainTokenService, AxelarGateway, GasService } =
   SuiTypedContracts[ENVIRONMENT];
 
+console.log("Environment:", environment);
+
 // SQD token
 const TOKEN_ADDRESS =
   "0xdec8d72a69438bc872824e70944cd4d89d25c34e3f149993b2d06718d4fd87e2";
@@ -24,33 +28,6 @@ const ITS_TOKEN_ID =
   "0x42e69c5a9903ba193f3e9214d41b1ad495faace3ca712fb0c9d0c44cc4d31a0c";
 const ITS_TOKEN_TYPE = `${TOKEN_ADDRESS}::${TOKEN_SYMBOL.toLowerCase()}::${TOKEN_SYMBOL.toUpperCase()}`;
 const CLOCK_PACKAGE_ID = "0x6";
-
-type HopParams = {
-  sourceChain: string;
-  destinationChain: string;
-  gasLimit: string;
-};
-
-// --- Helper Functions ---
-async function calculateEstimatedFee(
-  sdk: AxelarQueryAPI,
-  sourceChain: string,
-  destinationChain: string,
-): Promise<string> {
-  const hopParams: HopParams[] = [
-    {
-      sourceChain: sourceChain,
-      destinationChain: "axelar",
-      gasLimit: "400000",
-    },
-    {
-      sourceChain: "axelar",
-      destinationChain: destinationChain,
-      gasLimit: "1100000",
-    },
-  ];
-  return (await sdk.estimateMultihopFee(hopParams)) as string;
-}
 
 // --- Main Execution ---
 (async () => {
@@ -76,11 +53,7 @@ async function calculateEstimatedFee(
     gasService: contracts.GasService.objects.GasService,
   };
 
-  const sdk = new AxelarQueryAPI({
-    environment: ENVIRONMENT,
-  });
-
-  const fee = await calculateEstimatedFee(sdk, "sui", DESTINATION_CHAIN);
+  const fee = await calculateEstimatedFee("sui", DESTINATION_CHAIN);
   console.log("Estimated Fee:", `${formatUnits(fee, 9)} SUI`);
 
   console.log(
