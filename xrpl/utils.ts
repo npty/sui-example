@@ -25,6 +25,7 @@ export function parseToken(token: string, amount: string) {
 export async function getBalances(
   client: Client,
   account: string,
+  itsContractAddress: string,
 ): Promise<TokenBalance[]> {
   const { result } = await client.request({
     command: "account_info",
@@ -35,7 +36,7 @@ export async function getBalances(
     command: "account_lines",
     account,
     ledger_index: "validated",
-    peer: "rNrjh1KGZk2jBR3wPfAQnoidtFFYQKbQn2",
+    peer: itsContractAddress,
   });
 
   return [

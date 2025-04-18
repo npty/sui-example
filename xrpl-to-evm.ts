@@ -10,7 +10,7 @@ import { environment } from "./common/env";
 const destinationAddress =
   process.argv[2] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
 const destinationChain = process.argv[3] || "ethereum-sepolia";
-const tokenSymbol = process.argv[4] || "SQD.rNrjh1KGZk2jBR3wPfAQnoidtFFYQKbQn2";
+const tokenSymbol = process.argv[4] || "SQD";
 const transferAmount = process.argv[5] || "1";
 const xrplWalletSeed = process.env.XRPL_SEED || "";
 
@@ -30,6 +30,15 @@ if (!transferAmount) {
   throw new Error("Invalid transfer amount");
 }
 
+// Get axelar chain config from s3
+const xrplChainConfig = await getXrplChainConfig();
+
+const itsContractAddress =
+  xrplChainConfig.config.contracts.InterchainTokenService.address;
+
+const normalizedTokenSymbol =
+  tokenSymbol === "XRP" ? "XRP" : `${tokenSymbol}.${itsContractAddress}`;
+
 const wallet = getWallet({
   walletKeyType: xrpl.ECDSA.secp256k1,
   privateKey: xrplWalletSeed,
@@ -44,7 +53,11 @@ const client = new xrpl.Client(rpcUrl);
 // Connect to the WSS server
 await client.connect();
 
-const balances = await getBalances(client, wallet.address).catch(() => [
+const balances = await getBalances(
+  client,
+  wallet.address,
+  itsContractAddress,
+).catch(() => [
   {
     symbol: "XRP",
     value: "0",
@@ -68,12 +81,13 @@ if (parseInt(xrpBalance.value) < 5) {
   await fundWallet(client, wallet);
 
   // Check the updated balance
-  const balance = await getBalances(client, wallet.address);
-  console.log("XRP Balance:", xrpl.dropsToXrp(xrpBalance.value), "XRP");
+  const [updatedXrpBalance] = await getBalances(
+    client,
+    wallet.address,
+    itsContractAddress,
+  );
+  console.log("XRP Balance:", xrpl.dropsToXrp(updatedXrpBalance.value), "XRP");
 }
-
-// Get axelar chain config from s3
-const xrplChainConfig = await getXrplChainConfig();
 
 // Estimate the fee
 const fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
@@ -83,8 +97,8 @@ console.log("Send Amount:", `${transferAmount} ${tokenSymbol}`);
 const response = await signAndSubmitTx(client, wallet, {
   TransactionType: "Payment",
   Account: wallet.address,
-  Destination: xrplChainConfig.config.contracts.InterchainTokenService.address,
-  Amount: parseToken(tokenSymbol, transferAmount),
+  Destination: itsContractAddress,
+  Amount: parseToken(normalizedTokenSymbol, transferAmount),
   Memos: [
     {
       Memo: {
