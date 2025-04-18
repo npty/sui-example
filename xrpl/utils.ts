@@ -8,7 +8,12 @@ export function parseToken(token: string, amount: string) {
   if (token === "XRP") {
     return xrpToDrops(amount).toString();
   } else {
-    throw new Error("Unsupported token");
+    const [currency, issuer] = token.split(".");
+    return {
+      currency,
+      issuer,
+      value: amount,
+    };
   }
 }
 
