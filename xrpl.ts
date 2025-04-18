@@ -121,15 +121,15 @@ const response = await signAndSubmitTx(client, wallet, {
     {
       Memo: {
         MemoType: hex("gas_fee_amount"),
-        MemoData: hex(fee.toString()),
+        MemoData: hex("1"), // hardcoded for now
       },
     },
-    {
-      Memo: {
-        MemoType: hex("payload"),
-        MemoData: hex("0x"),
-      },
-    },
+    // {
+    //   Memo: {
+    //     MemoType: hex("payload"),
+    //     MemoData: hex("0x"),
+    //   },
+    // },
   ],
 });
 
