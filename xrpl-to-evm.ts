@@ -43,7 +43,7 @@ const client = new xrpl.Client(rpcUrl);
 // Connect to the WSS server
 await client.connect();
 
-const balance = await getBalance(client, wallet.address);
+const balance = await getBalance(client, wallet.address).catch(() => "0");
 
 console.log("Wallet Balance:", xrpl.dropsToXrp(balance), "XRP");
 
