@@ -1,6 +1,6 @@
-# ITS Example
+# Interchain Transfer Example
 
-This is an example of how to send ITS token from Sui to EVM chain.
+This is an example of sending ITS token from Sui and XRPL to other chains.
 
 ## Preparation
 
@@ -26,20 +26,32 @@ For Sui, you need to set `SUI_PRIVATE_KEY` in `.env` file.
 
 ## Sui ITS Transfer
 
-Send 1 ITS token from Sui to EVM chain:
+Send SQD token from Sui to other chain:
 
 ```bash
-bun sui:start <destination-address> <amount>
+bun sui:start <destination-chain> <destination-address> <amount>
+```
+
+Example:
+
+```bash
+bun sui:start ethereum-sepolia 0x5eaF5407acc1be854644BE2Be20Ac23D07e491D6 1
 ```
 
 > Note: the destination address and amount are optional.
 
 ## XRPL ITS Transfer
 
-Send XRP from XRPL to other chain
+Send XRP or SQD from XRPL to other chain
 
 ```bash
-bun xrpl:start <destination-address> <destination-chain> <amount>
+bun xrpl:start <destination-address> <destination-chain> <token-symbol> <amount>
+```
+
+Example:
+
+```bash
+bun xrpl:start 0x5eaF5407acc1be854644BE2Be20Ac23D07e491D6 ethereum-sepolia SQD 1
 ```
 
 > Note: the destination chain and amount are optional. destination-address is required.
