@@ -8,20 +8,26 @@ import SuiTypedContracts from "@axelarjs/sui";
 import { getItsCoin } from "./sui/coin";
 import { calculateEstimatedFee } from "./common/gasEstimation";
 import { environment } from "./common/env";
+import { convertAddress, convertAddressForXrpl } from "./sui/utils";
+import { bcs } from "@mysten/sui/bcs";
 
 // --- Constants ---
-const DESTINATION_CHAIN = "ethereum-sepolia";
+const DESTINATION_CHAIN: string = process.argv[2] || "flow";
 const DESTINATION_ADDRESS =
-  process.argv[2] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
-const TOKEN_SYMBOL = "SQD";
-const UNIT_AMOUNT = parseUnits(process.argv[3] || "1", 9);
+  process.argv[3] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
+const UNIT_AMOUNT = parseUnits(process.argv[4] || "1", 9);
 const ENVIRONMENT = "testnet" as Environment;
 const { InterchainTokenService, AxelarGateway, GasService } =
   SuiTypedContracts[ENVIRONMENT];
 
 console.log("Environment:", environment);
+let destinationAddress =
+  DESTINATION_CHAIN === "xrpl"
+    ? convertAddressForXrpl(DESTINATION_ADDRESS).toBytes()
+    : convertAddress(DESTINATION_ADDRESS).toBytes();
 
 // SQD token
+const TOKEN_SYMBOL = "SQD";
 const TOKEN_ADDRESS =
   "0xdec8d72a69438bc872824e70944cd4d89d25c34e3f149993b2d06718d4fd87e2";
 const ITS_TOKEN_ID =
@@ -81,6 +87,9 @@ const CLOCK_PACKAGE_ID = "0x6";
     BigInt(ITS_TOKEN_ID),
   ]);
 
+  // Serialize empty metadata as a byte vector
+  const emptyMetadata = bcs.byteVector().serialize(new Uint8Array()).toBytes();
+
   // Prepare interchain transfer
   const ticket =
     InterchainTokenService.interchain_token_service.builder.prepareInterchainTransfer(
@@ -89,8 +98,8 @@ const CLOCK_PACKAGE_ID = "0x6";
         tokenId,
         transferCoin,
         DESTINATION_CHAIN,
-        tx.object(DESTINATION_ADDRESS),
-        tx.object("0x"),
+        tx.pure(destinationAddress),
+        tx.pure(emptyMetadata),
         channel,
       ],
       [ITS_TOKEN_TYPE],
