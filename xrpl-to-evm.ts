@@ -1,7 +1,7 @@
 import { getXrplChainConfig } from "./common/chains";
 import { calculateEstimatedFee } from "./common/gasEstimation";
 import { signAndSubmitTx } from "./xrpl/tx";
-import { getBalance, hex, parseToken } from "./xrpl/utils";
+import { getBalances, hex, parseToken } from "./xrpl/utils";
 import { fundWallet, getWallet } from "./xrpl/wallet";
 import xrpl from "xrpl";
 import { environment } from "./common/env";
@@ -10,7 +10,8 @@ import { environment } from "./common/env";
 const destinationAddress =
   process.argv[2] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
 const destinationChain = process.argv[3] || "ethereum-sepolia";
-const transferAmount = process.argv[4] || "0.1";
+const tokenSymbol = process.argv[4] || "SQD.rNrjh1KGZk2jBR3wPfAQnoidtFFYQKbQn2";
+const transferAmount = process.argv[5] || "1";
 const xrplWalletSeed = process.env.XRPL_SEED || "";
 
 console.log("Environment:", environment);
@@ -43,37 +44,47 @@ const client = new xrpl.Client(rpcUrl);
 // Connect to the WSS server
 await client.connect();
 
-const balance = await getBalance(client, wallet.address).catch(() => "0");
+const balances = await getBalances(client, wallet.address).catch(() => [
+  {
+    symbol: "XRP",
+    value: "0",
+  },
+]);
 
-console.log("Wallet Balance:", xrpl.dropsToXrp(balance), "XRP");
+const [xrpBalance, ...otherBalances] = balances;
+
+console.log("XRP Balance:", xrpl.dropsToXrp(xrpBalance.value), "XRP");
+
+// Print other ITS token balances that held by the wallet
+for (const balance of otherBalances) {
+  console.log(`${balance.symbol} Balance:`, balance.value, balance.symbol);
+}
 
 // Fund wallet if balance is less than transfer amount
-if (parseInt(balance) < parseInt(parseToken("XRP", transferAmount))) {
+if (parseInt(xrpBalance.value) < 5) {
   console.log("Balance too low, funding wallet with 100 XRP...");
 
   // Fund wallet with 100 XRP
   await fundWallet(client, wallet);
 
   // Check the updated balance
-  const balance = await getBalance(client, wallet.address);
-  console.log("Wallet Balance:", xrpl.dropsToXrp(balance), "XRP");
+  const balance = await getBalances(client, wallet.address);
+  console.log("XRP Balance:", xrpl.dropsToXrp(xrpBalance.value), "XRP");
 }
 
 // Get axelar chain config from s3
 const xrplChainConfig = await getXrplChainConfig();
 
-console.log("xrplChainConfig");
-
 // Estimate the fee
 const fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
 console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
-console.log("Send Amount:", `${transferAmount} XRP`);
+console.log("Send Amount:", `${transferAmount} ${tokenSymbol}`);
 
 const response = await signAndSubmitTx(client, wallet, {
   TransactionType: "Payment",
   Account: wallet.address,
   Destination: xrplChainConfig.config.contracts.InterchainTokenService.address,
-  Amount: parseToken("XRP", transferAmount),
+  Amount: parseToken(tokenSymbol, transferAmount),
   Memos: [
     {
       Memo: {
