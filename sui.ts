@@ -21,6 +21,8 @@ const { InterchainTokenService, AxelarGateway, GasService } =
   SuiTypedContracts[ENVIRONMENT];
 
 console.log("Environment:", environment);
+
+// If the destination chain is XRPL, you'll need to set a trust line with token issuer first (the address of interchain token service contract at xrpl).
 let destinationAddress =
   DESTINATION_CHAIN === "xrpl"
     ? convertAddressForXrpl(DESTINATION_ADDRESS).toBytes()

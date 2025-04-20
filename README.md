@@ -39,10 +39,13 @@ bun sui:start ethereum-sepolia 0x5eaF5407acc1be854644BE2Be20Ac23D07e491D6 1
 ```
 
 > Note: the destination address and amount are optional.
+> If the destination chain is xrpl, you've to setup the trust line using the recipient account first. See [setup-trust-line](#setup-trust-line)
 
 ## XRPL ITS Transfer
 
-Send XRP or SQD from XRPL to other chain
+Send XRP or SQD from XRPL to other chain. The gas fee is hardcoded to 1 SQD for SQD token, but it'll be calculated automatically for XRP token.
+
+The transfer token will be the same as the gas fee token and the recipient address will receive the deducted token.
 
 ```bash
 bun xrpl:start <destination-address> <destination-chain> <token-symbol> <amount>
@@ -51,7 +54,21 @@ bun xrpl:start <destination-address> <destination-chain> <token-symbol> <amount>
 Example:
 
 ```bash
-bun xrpl:start 0x5eaF5407acc1be854644BE2Be20Ac23D07e491D6 ethereum-sepolia SQD 1
+bun xrpl:start 0x5eaF5407acc1be854644BE2Be20Ac23D07e491D6 ethereum-sepolia SQD 10
 ```
 
 > Note: the destination chain and amount are optional. destination-address is required.
+
+## Setup Trust Line
+
+Setup the trust line for issuer of the token to allow it holds the give token. You can run the following command to setup the trust line:
+
+```bash
+bun xrpl:trust-line <token-symbol> <amount>
+```
+
+Example:
+
+```bash
+bun xrpl:trust-line SQD 10000
+```

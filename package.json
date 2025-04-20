@@ -8,7 +8,8 @@
   "scripts": {
     "sui:start": "bun run sui.ts",
     "xrpl:wallet": "bun run gen-xrpl-wallet.ts",
-    "xrpl:start": "bun run xrpl.ts"
+    "xrpl:start": "bun run xrpl.ts",
+    "xrpl:trust-line": "bun run xrpl-trust-line.ts"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
