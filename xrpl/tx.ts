@@ -1,11 +1,5 @@
 import { Client, Wallet, type SubmitResponse } from "xrpl";
 
-export interface SignAndSubmitArgs {
-  account?: string;
-  fee?: string;
-  // Add other potential args if known
-}
-
 /**
  * Basic receipt handling. Throws an error on failure.
  * @param receipt The result object from the transaction submission.

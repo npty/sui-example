@@ -118,12 +118,19 @@ const response = await signAndSubmitTx(client, wallet, {
         MemoData: hex(destinationChain),
       },
     },
+    // The token to pay for gas fees will be the same as the token to be transferred. This is different from other chains.
+    // The CommonPrefix team has hardcoded the gas fee token for testnet as follows:
+    // a384dc638c897bc6a0d43d8461dd21fe3aaab53d75f46a7c90de871f9eed8407: 8.98  # WAVAX
+    // c8895f8ceb0cae9da15bb9d2bc5859a184ca0f61c88560488355c8a7364deef8: 1.00  # FOO
+    // 42e69c5a9903ba193f3e9214d41b1ad495faace3ca712fb0c9d0c44cc4d31a0c: 1.00  # SQD
+    // 61d56768967a50c3f05f6ec710f7fb92824d73842796efd55dd157d98d68bf87: 775.0 # WETH
     {
       Memo: {
         MemoType: hex("gas_fee_amount"),
-        MemoData: hex("1"), // hardcoded for now
+        MemoData: hex("1"),
       },
     },
+    // Don't need to add payload memo if it's empty.
     // {
     //   Memo: {
     //     MemoType: hex("payload"),
