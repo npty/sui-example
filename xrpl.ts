@@ -49,12 +49,10 @@ let payload;
 const isEvmDestination = destinationChainType === "evm";
 
 if (isEvmDestination) {
-  // encode the payload for squid contract
   const squidPayload = AbiCoder.defaultAbiCoder().encode(
     ["address", "bytes32"],
     [destinationAddress, hexlify(randomBytes(32))],
   );
-  // attach 4 bytes version
   const metadataVersionBytes = hexlify("0x");
 
   payload = concat([getBytes(metadataVersionBytes), getBytes(squidPayload)]);
