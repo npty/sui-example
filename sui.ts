@@ -12,7 +12,7 @@ import { convertAddress, convertAddressForXrpl } from "./sui/utils";
 import { bcs } from "@mysten/sui/bcs";
 
 // --- Constants ---
-const DESTINATION_CHAIN: string = process.argv[2] || "flow";
+const DESTINATION_CHAIN: string = process.argv[2] || "ethereum-sepolia";
 const DESTINATION_ADDRESS =
   process.argv[3] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
 const UNIT_AMOUNT = parseUnits(process.argv[4] || "1", 9);
