@@ -46,8 +46,7 @@ const chainConfigs = await getChainConfig();
 const destinationChainType = chainConfigs.chains[destinationChain].chainType;
 let payload;
 
-const isEvmDestination = false;
-// const isEvmDestination = destinationChainType === "evm";
+const isEvmDestination = destinationChainType === "evm";
 
 if (isEvmDestination) {
   // encode the payload for squid contract
@@ -56,7 +55,7 @@ if (isEvmDestination) {
     [destinationAddress, hexlify(randomBytes(32))],
   );
   // attach 4 bytes version
-  const metadataVersionBytes = zeroPadValue(hexlify("0x"), 4);
+  const metadataVersionBytes = hexlify("0x");
 
   payload = concat([getBytes(metadataVersionBytes), getBytes(squidPayload)]);
 }
@@ -125,9 +124,7 @@ const squidEvmContractAddress = "0x9bEb991eDdF92528E6342Ec5f7B0846C24cbaB58";
 // c8895f8ceb0cae9da15bb9d2bc5859a184ca0f61c88560488355c8a7364deef8: 1.00  # FOO
 // 42e69c5a9903ba193f3e9214d41b1ad495faace3ca712fb0c9d0c44cc4d31a0c: 1.00  # SQD
 // 61d56768967a50c3f05f6ec710f7fb92824d73842796efd55dd157d98d68bf87: 775.0 # WETH
-//
-// xrpl-evm seems to need a higher fee than other destination chain
-let fee = destinationChain === "xrpl-evm" ? "3" : "1";
+let fee = "1";
 if (tokenSymbol === "XRP") {
   fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
   console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
@@ -172,7 +169,7 @@ if (payload) {
   Memos.push({
     Memo: {
       MemoType: hex("payload"),
-      MemoData: hex(payload),
+      MemoData: payload.replace("0x", ""),
     },
   });
 }
