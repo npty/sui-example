@@ -27,5 +27,9 @@ export async function calculateEstimatedFee(
       gasLimit: "1100000",
     },
   ];
-  return (await sdk.estimateMultihopFee(hopParams)) as string;
+  const amount = (await sdk.estimateMultihopFee(hopParams)) as string;
+
+  return destinationChain === "xrpl"
+    ? Math.ceil(parseInt(amount) / 2).toString()
+    : amount;
 }
