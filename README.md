@@ -61,10 +61,6 @@ bun xrpl:start 0x5eaF5407acc1be854644BE2Be20Ac23D07e491D6 ethereum-sepolia SQD 1
 
 ## Setup Trust Line
 
-Setup the trust line for issuer of the token to allow it holds the give token. You can run the following command to setup the trust line:
-
-## Setup Trust Line
-
 Set up a trust line to allow your account to hold tokens issued by another account. The trust line establishes a limit on how many tokens you're willing to accept. You can run the following command to set up the trust line:
 
 ```bash
