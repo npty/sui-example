@@ -1,6 +1,6 @@
-import { signAndSubmitTx } from "./xrpl/tx";
-import { getXrplChainConfig } from "./common/chains";
-import { getWallet } from "./xrpl/wallet";
+import { signAndSubmitTx } from "xrpl/tx";
+import { getXrplChainConfig } from "common/chains";
+import { getWallet } from "xrpl/wallet";
 import xrpl from "xrpl";
 
 const tokenSymbol = process.argv[2] || "SQD";

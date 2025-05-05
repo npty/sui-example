@@ -1,19 +1,11 @@
-import { getChainConfig, getXrplChainConfig } from "./common/chains";
-import { calculateEstimatedFee } from "./common/gasEstimation";
-import { signAndSubmitTx } from "./xrpl/tx";
-import { getBalances, hex, parseToken } from "./xrpl/utils";
-import { fundWallet, getWallet } from "./xrpl/wallet";
+import { getChainConfig, getXrplChainConfig } from "common/chains";
+import { calculateEstimatedFee } from "common/gasEstimation";
+import { signAndSubmitTx } from "xrpl/tx";
+import { getBalances, hex, parseToken } from "xrpl/utils";
+import { fundWallet, getWallet } from "xrpl/wallet";
 import xrpl from "xrpl";
-import { environment } from "./common/env";
-import {
-  AbiCoder,
-  concat,
-  getBytes,
-  hexlify,
-  randomBytes,
-  zeroPadBytes,
-} from "ethers";
-import { zeroPadValue } from "ethers";
+import { environment } from "common/env";
+import { AbiCoder, concat, getBytes, hexlify, randomBytes } from "ethers";
 
 // Parse command line arguments
 const destinationAddress =
@@ -51,7 +43,7 @@ const isEvmDestination = destinationChainType === "evm";
 if (isEvmDestination) {
   const squidPayload = AbiCoder.defaultAbiCoder().encode(
     ["address", "bytes32"],
-    [destinationAddress, hexlify(randomBytes(32))],
+    [destinationAddress, hexlify(randomBytes(32))]
   );
   const metadataVersionBytes = hexlify("0x");
 
@@ -81,7 +73,7 @@ await client.connect();
 const balances = await getBalances(
   client,
   wallet.address,
-  itsContractAddress,
+  itsContractAddress
 ).catch(() => [
   {
     symbol: "XRP",
@@ -109,7 +101,7 @@ if (parseInt(xrpBalance.value) < 5) {
   const [updatedXrpBalance] = await getBalances(
     client,
     wallet.address,
-    itsContractAddress,
+    itsContractAddress
   );
   console.log("XRP Balance:", xrpl.dropsToXrp(updatedXrpBalance.value), "XRP");
 }
@@ -144,7 +136,7 @@ const Memos = [
         (isEvmDestination
           ? squidEvmContractAddress
           : destinationAddress
-        ).replace("0x", ""),
+        ).replace("0x", "")
       ),
     },
   },

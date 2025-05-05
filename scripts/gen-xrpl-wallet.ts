@@ -1,4 +1,4 @@
-import { generateWallet } from "./xrpl/wallet";
+import { generateWallet } from "xrpl/wallet";
 import xrpl from "xrpl";
 
 const wallet = generateWallet({ walletKeyType: xrpl.ECDSA.secp256k1 });
