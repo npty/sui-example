@@ -1,4 +1,8 @@
-import type { SuiChainConfig, XrplChainConfig } from "./types";
+import type {
+  StellarChainConfig,
+  SuiChainConfig,
+  XrplChainConfig,
+} from "./types";
 import { environment } from "../common/env";
 
 export async function getChainConfig() {
@@ -31,4 +35,14 @@ export async function getXrplChainConfig(): Promise<XrplChainConfig> {
   ) as string;
 
   return chainConfig.chains[xrplChainId];
+}
+
+export async function getStellarChainConfig(): Promise<StellarChainConfig> {
+  const chainConfig = await getChainConfig();
+
+  const stellarChainId = Object.keys(chainConfig.chains).find(
+    (chain) => chainConfig.chains[chain].chainType === "stellar",
+  ) as string;
+
+  return chainConfig.chains[stellarChainId];
 }

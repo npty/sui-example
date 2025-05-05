@@ -35,3 +35,13 @@ export type XrplChainConfig = {
     contracts: Record<string, BaseContract>;
   };
 };
+
+export type StellarChainConfig = {
+  id: string;
+  chainType: string;
+  blockExplorers: BlockExplorer[];
+  config: {
+    rpc: string[];
+    contracts: Record<string, BaseContract>;
+  };
+};
