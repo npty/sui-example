@@ -1,9 +1,22 @@
 import type { Environment } from "@axelar-network/axelarjs-sdk";
-import { Contract, nativeToScVal } from "@stellar/stellar-sdk";
+import {} from "@stellar/stellar-sdk";
 import { getStellarChainConfig } from "common/chains";
 import { parseUnits } from "ethers";
 import { getWallet } from "stellar/wallet";
-import { addressToScVal, hexToScVal, tokenToScVal } from "stellar/utils";
+import {
+  TransactionBuilder,
+  Contract,
+  nativeToScVal,
+  rpc,
+  BASE_FEE,
+  Networks,
+} from "@stellar/stellar-sdk";
+import {
+  addressToScVal,
+  hexToScVal,
+  tokenToScVal,
+  waitForTransaction,
+} from "stellar/utils";
 
 // --- Constants ---
 const DESTINATION_CHAIN: string = process.argv[2] || "sui";
@@ -16,23 +29,24 @@ const ENVIRONMENT = "testnet" as Environment;
 console.log("Environment:", ENVIRONMENT);
 
 // SQD token
-const TOKEN_SYMBOL = "SQD";
-const TOKEN_ADDRESS =
-  "CDBBR6BVVZO32NMFCJJWRJFTKV3QQ2ZLITKKGINP2ONUQCTK7PCT4M3W";
+// const TOKEN_ADDRESS =
+// "CDBBR6BVVZO32NMFCJJWRJFTKV3QQ2ZLITKKGINP2ONUQCTK7PCT4M3W";
 const ITS_TOKEN_ID =
   "0x42e69c5a9903ba193f3e9214d41b1ad495faace3ca712fb0c9d0c44cc4d31a0c";
 
 const wallet = getWallet();
-
-console.log("Wallet Address:", wallet.publicKey());
+const walletAddress = wallet.publicKey();
+console.log("Wallet Address:", walletAddress);
 
 // --- Main Execution ---
 (async () => {
   const chainConfig = await getStellarChainConfig();
+  const server = new rpc.Server(chainConfig.config.rpc[0]);
   const contractId =
     chainConfig.config.contracts.InterchainTokenService.address;
   const contract = new Contract(contractId);
   const caller = addressToScVal(wallet.publicKey());
+  const account = await server.getAccount(walletAddress);
   const gasTokenAddress =
     "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
@@ -44,6 +58,25 @@ console.log("Wallet Address:", wallet.publicKey());
     hexToScVal(DESTINATION_ADDRESS),
     nativeToScVal(UNIT_AMOUNT, { type: "i128" }),
     nativeToScVal(null, { type: "null" }),
-    tokenToScVal(gasTokenAddress, 3e7)
+    tokenToScVal(gasTokenAddress, 1e7)
   );
+
+  const builtTransaction = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase:
+      ENVIRONMENT === "mainnet" ? Networks.PUBLIC : Networks.TESTNET,
+  })
+    .addOperation(operation)
+    .setTimeout(30)
+    .build();
+
+  const prepareTransaction = await server.prepareTransaction(builtTransaction);
+
+  prepareTransaction.sign(wallet);
+
+  const txReceipt = await server.sendTransaction(prepareTransaction);
+
+  const tx = await waitForTransaction(server, txReceipt.hash);
+
+  console.log("Transaction Hash:", tx.txHash);
 })();
