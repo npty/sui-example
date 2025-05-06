@@ -1,6 +1,6 @@
 import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { getSuiChainConfig } from "common/chains";
+import { getChainConfig } from "common/chains";
 import { getSuiKeypair } from "sui/suiWallet";
 import { Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
@@ -39,10 +39,11 @@ const CLOCK_PACKAGE_ID = "0x6";
 
 // --- Main Execution ---
 (async () => {
-  const chainConfig = await getSuiChainConfig();
-  const contracts = chainConfig.config.contracts;
+  const suiChainConfig = await getChainConfig("sui");
+  const destinationChainConfig = await getChainConfig(DESTINATION_CHAIN);
+  const contracts = suiChainConfig.config.contracts;
 
-  const suiClient = new SuiClient({ url: chainConfig.config.rpc[0] });
+  const suiClient = new SuiClient({ url: suiChainConfig.config.rpc[0] });
   const suiWallet = getSuiKeypair();
   const walletAddress = suiWallet.toSuiAddress();
 
@@ -61,7 +62,7 @@ const CLOCK_PACKAGE_ID = "0x6";
     gasService: contracts.GasService.objects.GasService,
   };
 
-  const fee = await calculateEstimatedFee("sui", DESTINATION_CHAIN);
+  const fee = await calculateEstimatedFee("sui", destinationChainConfig);
   console.log("Estimated Fee:", `${formatUnits(fee, 9)} SUI`);
 
   console.log(
@@ -146,6 +147,6 @@ const CLOCK_PACKAGE_ID = "0x6";
 
   console.log(
     "Transaction Hash:",
-    `${chainConfig.blockExplorers[0].url}/tx/${response.digest}`
+    `${suiChainConfig.blockExplorers[0].url}/tx/${response.digest}`
   );
 })();

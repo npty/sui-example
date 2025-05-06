@@ -17,31 +17,28 @@ export type SuiContracts = {
   InterchainTokenService: SuiContract;
 };
 
-export type SuiChainConfig = {
+export type BaseChainConfig = {
   id: string;
+  chainType: string;
   blockExplorers: BlockExplorer[];
+  config: {
+    rpc: string[];
+    contracts: Record<string, BaseContract>;
+  };
+};
+
+export type SuiChainConfig = BaseChainConfig & {
+  chainType: "sui";
   config: {
     rpc: string[];
     contracts: SuiContracts;
   };
 };
 
-export type XrplChainConfig = {
-  id: string;
-  chainType: string;
-  blockExplorers: BlockExplorer[];
-  config: {
-    rpc: string[];
-    contracts: Record<string, BaseContract>;
-  };
+export type XrplChainConfig = BaseChainConfig & {
+  chainType: "xrpl";
 };
 
-export type StellarChainConfig = {
-  id: string;
-  chainType: string;
-  blockExplorers: BlockExplorer[];
-  config: {
-    rpc: string[];
-    contracts: Record<string, BaseContract>;
-  };
+export type StellarChainConfig = BaseChainConfig & {
+  chainType: "stellar";
 };

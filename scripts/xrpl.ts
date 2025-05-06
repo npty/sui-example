@@ -1,4 +1,4 @@
-import { getChainConfig, getXrplChainConfig } from "common/chains";
+import { getChainConfig } from "common/chains";
 import { calculateEstimatedFee } from "common/gasEstimation";
 import { signAndSubmitTx } from "xrpl/tx";
 import { getBalances, hex, parseToken } from "xrpl/utils";
@@ -32,10 +32,11 @@ if (!transferAmount) {
 }
 
 // Get axelar chain config from s3
-const xrplChainConfig = await getXrplChainConfig();
-const chainConfigs = await getChainConfig();
+const xrplChainConfig = await getChainConfig("xrpl");
+const destinationChainConfig = await getChainConfig(destinationChain);
 
-const destinationChainType = chainConfigs.chains[destinationChain].chainType;
+const destinationChainType = destinationChainConfig.chainType;
+
 let payload;
 
 const isEvmDestination = destinationChainType === "evm";
@@ -116,7 +117,7 @@ const squidEvmContractAddress = "0x9bEb991eDdF92528E6342Ec5f7B0846C24cbaB58";
 // 61d56768967a50c3f05f6ec710f7fb92824d73842796efd55dd157d98d68bf87: 775.0 # WETH
 let fee = "1";
 if (tokenSymbol === "XRP") {
-  fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
+  fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChainConfig);
   console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
 }
 
