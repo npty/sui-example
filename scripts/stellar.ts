@@ -1,4 +1,3 @@
-import { Asset } from "@stellar/stellar-sdk";
 import { getChainConfig } from "common/chains";
 import { formatUnits, parseUnits } from "ethers";
 import { getWallet } from "stellar/wallet";
@@ -21,9 +20,11 @@ import { calculateEstimatedFee } from "common/gasEstimation";
 import { environment } from "common/env";
 import { getAxelarscanLink } from "common/axelarscan";
 import { Client } from "@stellar/stellar-sdk/minimal/contract";
+import { generateSquidEvmPayload } from "common/squid";
 
 // --- Constants ---
 const DESTINATION_CHAIN: string = process.argv[2] || "sui";
+const squidEvmContractAddress = "0x9bEb991eDdF92528E6342Ec5f7B0846C24cbaB58";
 const DESTINATION_ADDRESS =
   process.argv[3] ||
   "0xba353a510d8a1174b37c31e6eab6e2d6d93cdb31cd093efdd30c177853533ab0";
@@ -67,6 +68,13 @@ const { result: balance } = await sqdContract.balance({
 });
 console.log("SQD Balance:", formatUnits(balance, 9));
 
+const destinationChainType = destinationChainConfig.chainType;
+
+const payload =
+  destinationChainType === "evm"
+    ? generateSquidEvmPayload(DESTINATION_ADDRESS)
+    : undefined;
+
 // --- Main Execution ---
 const gasFee = await calculateEstimatedFee(
   stellarChainConfig.id,
@@ -93,9 +101,13 @@ const operation = contract.call(
   caller,
   hexToScVal(ITS_TOKEN_ID),
   nativeToScVal(DESTINATION_CHAIN, { type: "string" }),
-  hexToScVal(DESTINATION_ADDRESS),
+  payload
+    ? hexToScVal(squidEvmContractAddress)
+    : hexToScVal(DESTINATION_ADDRESS),
   nativeToScVal(UNIT_AMOUNT, { type: "i128" }),
-  nativeToScVal(null, { type: "null" }),
+  payload
+    ? hexToScVal(payload as string)
+    : nativeToScVal(null, { type: "null" }),
   tokenToScVal(gasTokenAddress, parseInt(gasFee))
 );
 

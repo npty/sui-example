@@ -5,7 +5,7 @@ import { getBalances, hex, parseToken } from "xrpl/utils";
 import { fundWallet, getWallet } from "xrpl/wallet";
 import xrpl from "xrpl";
 import { environment } from "common/env";
-import { AbiCoder, concat, getBytes, hexlify, randomBytes } from "ethers";
+import { generateSquidEvmPayload } from "common/squid";
 
 // Parse command line arguments
 const destinationAddress =
@@ -37,19 +37,10 @@ const destinationChainConfig = await getChainConfig(destinationChain);
 
 const destinationChainType = destinationChainConfig.chainType;
 
-let payload;
-
-const isEvmDestination = destinationChainType === "evm";
-
-if (isEvmDestination) {
-  const squidPayload = AbiCoder.defaultAbiCoder().encode(
-    ["address", "bytes32"],
-    [destinationAddress, hexlify(randomBytes(32))]
-  );
-  const metadataVersionBytes = hexlify("0x");
-
-  payload = concat([getBytes(metadataVersionBytes), getBytes(squidPayload)]);
-}
+const payload =
+  destinationChainType === "evm"
+    ? generateSquidEvmPayload(destinationAddress)
+    : undefined;
 
 const itsContractAddress =
   xrplChainConfig.config.contracts.InterchainTokenService.address;
@@ -134,10 +125,10 @@ const Memos = [
     Memo: {
       MemoType: hex("destination_address"),
       MemoData: hex(
-        (isEvmDestination
-          ? squidEvmContractAddress
-          : destinationAddress
-        ).replace("0x", "")
+        (payload ? squidEvmContractAddress : destinationAddress).replace(
+          "0x",
+          ""
+        )
       ),
     },
   },
