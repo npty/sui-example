@@ -46,7 +46,6 @@ export async function calculateEstimatedFee(
   });
 
   const destChainGasLimit = getGasLimit(destinationChainConfig.chainType);
-  console.log("Destination Chain Gas Limit:", destChainGasLimit);
 
   const hopParams: HopParams[] = [
     {
