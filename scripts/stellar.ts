@@ -1,7 +1,6 @@
-import type { Environment } from "@axelar-network/axelarjs-sdk";
 import {} from "@stellar/stellar-sdk";
-import { getStellarChainConfig } from "common/chains";
-import { parseUnits } from "ethers";
+import { getChainConfig } from "common/chains";
+import { formatUnits, parseUnits } from "ethers";
 import { getWallet } from "stellar/wallet";
 import {
   TransactionBuilder,
@@ -13,10 +12,13 @@ import {
 } from "@stellar/stellar-sdk";
 import {
   addressToScVal,
+  getBalances,
   hexToScVal,
   tokenToScVal,
   waitForTransaction,
 } from "stellar/utils";
+import { calculateEstimatedFee } from "common/gasEstimation";
+import { environment } from "common/env";
 
 // --- Constants ---
 const DESTINATION_CHAIN: string = process.argv[2] || "sui";
@@ -24,9 +26,8 @@ const DESTINATION_ADDRESS =
   process.argv[3] ||
   "0xba353a510d8a1174b37c31e6eab6e2d6d93cdb31cd093efdd30c177853533ab0";
 const UNIT_AMOUNT = parseUnits(process.argv[4] || "1", 9);
-const ENVIRONMENT = "testnet" as Environment;
 
-console.log("Environment:", ENVIRONMENT);
+console.log("Environment:", environment);
 
 // SQD token
 // const TOKEN_ADDRESS =
@@ -38,45 +39,58 @@ const wallet = getWallet();
 const walletAddress = wallet.publicKey();
 console.log("Wallet Address:", walletAddress);
 
+// TODO: Check for the XLM and SQD balance
+const balances = await getBalances(walletAddress);
+console.log("Balances:", balances);
+
 // --- Main Execution ---
-(async () => {
-  const chainConfig = await getStellarChainConfig();
-  const server = new rpc.Server(chainConfig.config.rpc[0]);
-  const contractId =
-    chainConfig.config.contracts.InterchainTokenService.address;
-  const contract = new Contract(contractId);
-  const caller = addressToScVal(wallet.publicKey());
-  const account = await server.getAccount(walletAddress);
-  const gasTokenAddress =
-    "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+const stellarChainConfig = await getChainConfig("stellar");
+const destinationChainConfig = await getChainConfig(DESTINATION_CHAIN);
 
-  const operation = contract.call(
-    "interchain_transfer",
-    caller,
-    hexToScVal(ITS_TOKEN_ID),
-    nativeToScVal(DESTINATION_CHAIN, { type: "string" }),
-    hexToScVal(DESTINATION_ADDRESS),
-    nativeToScVal(UNIT_AMOUNT, { type: "i128" }),
-    nativeToScVal(null, { type: "null" }),
-    tokenToScVal(gasTokenAddress, 1e7)
-  );
+const gasFee = await calculateEstimatedFee(
+  stellarChainConfig.id,
+  destinationChainConfig
+);
 
-  const builtTransaction = new TransactionBuilder(account, {
-    fee: BASE_FEE,
-    networkPassphrase:
-      ENVIRONMENT === "mainnet" ? Networks.PUBLIC : Networks.TESTNET,
-  })
-    .addOperation(operation)
-    .setTimeout(30)
-    .build();
+console.log("Gas Fee:", formatUnits(gasFee, 7), "XLM");
 
-  const prepareTransaction = await server.prepareTransaction(builtTransaction);
+const server = new rpc.Server(stellarChainConfig.config.rpc[0]);
+const contractId =
+  stellarChainConfig.config.contracts.InterchainTokenService.address;
+const contract = new Contract(contractId);
+const caller = addressToScVal(wallet.publicKey());
+const account = await server.getAccount(walletAddress);
 
-  prepareTransaction.sign(wallet);
+// TODO: retrieve the gas token dynamically
+const gasTokenAddress =
+  "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
 
-  const txReceipt = await server.sendTransaction(prepareTransaction);
+const operation = contract.call(
+  "interchain_transfer",
+  caller,
+  hexToScVal(ITS_TOKEN_ID),
+  nativeToScVal(DESTINATION_CHAIN, { type: "string" }),
+  hexToScVal(DESTINATION_ADDRESS),
+  nativeToScVal(UNIT_AMOUNT, { type: "i128" }),
+  nativeToScVal(null, { type: "null" }),
+  tokenToScVal(gasTokenAddress, 1e7)
+);
 
-  const tx = await waitForTransaction(server, txReceipt.hash);
+const builtTransaction = new TransactionBuilder(account, {
+  fee: BASE_FEE,
+  networkPassphrase:
+    environment === "mainnet" ? Networks.PUBLIC : Networks.TESTNET,
+})
+  .addOperation(operation)
+  .setTimeout(30)
+  .build();
 
-  console.log("Transaction Hash:", tx.txHash);
-})();
+const prepareTransaction = await server.prepareTransaction(builtTransaction);
+
+prepareTransaction.sign(wallet);
+
+const txReceipt = await server.sendTransaction(prepareTransaction);
+
+const tx = await waitForTransaction(server, txReceipt.hash);
+
+console.log("Transaction Hash:", tx.txHash);

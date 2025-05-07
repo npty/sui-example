@@ -1,6 +1,7 @@
-import { Address, nativeToScVal } from "@stellar/stellar-sdk";
+import { Address, Horizon, nativeToScVal } from "@stellar/stellar-sdk";
 import { arrayify } from "@ethersproject/bytes";
 import { rpc } from "@stellar/stellar-sdk";
+import { environment } from "common/env";
 
 export function hexToScVal(hexString: string) {
   return nativeToScVal(Buffer.from(arrayify(hexString)), { type: "bytes" });
@@ -37,4 +38,31 @@ export async function waitForTransaction(server: rpc.Server, hash: string) {
   }
 
   return pendingTx;
+}
+
+export function getHorizonRpcUrl() {
+  if (environment === "mainnet") {
+    return "https://horizon.stellar.org";
+  } else {
+    return "https://horizon-testnet.stellar.org";
+  }
+}
+
+export async function getBalances(address: string) {
+  const horizonRpcUrl = getHorizonRpcUrl();
+
+  const horizonServer = new Horizon.Server(horizonRpcUrl);
+  const response = await horizonServer
+    .accounts()
+    .accountId(address)
+    .call()
+    .catch((error) => {
+      if (error?.response?.status === 404) {
+        return { balances: [] };
+      }
+
+      throw error;
+    });
+
+  return response.balances;
 }
