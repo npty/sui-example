@@ -53,7 +53,6 @@ const wallet = getWallet();
 const walletAddress = wallet.publicKey();
 console.log("Sender Wallet Address:", walletAddress);
 
-// TODO: Check for the XLM and SQD balance
 const balances = await getBalances(walletAddress);
 const xlmBalance = balances.find((balance) => balance.asset_type === "native");
 console.log("XLM Balance:", xlmBalance?.balance);
