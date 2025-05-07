@@ -1,8 +1,3 @@
-import type {
-  StellarChainConfig,
-  SuiChainConfig,
-  XrplChainConfig,
-} from "./types";
 import { environment } from "../common/env";
 
 export async function getChainConfigs() {
@@ -22,7 +17,7 @@ export async function getChainConfig(chainName: string) {
 
   // Future-proofing for sui chain id change e.g. from sui -> sui-2
   const chainId = Object.keys(chainConfigs.chains).find((chain) =>
-    chainConfigs.chains[chain].chainType.includes(chainName),
+    chainConfigs.chains[chain].id.includes(chainName),
   );
 
   if (!chainId) {
