@@ -1,14 +1,14 @@
 import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { getSuiChainConfig } from "./common/chains";
-import { getSuiKeypair } from "./sui/suiWallet";
+import { getChainConfig } from "common/chains";
+import { getSuiKeypair } from "sui/suiWallet";
 import { Environment } from "@axelar-network/axelarjs-sdk";
 import { formatUnits, parseUnits } from "ethers";
 import SuiTypedContracts from "@axelarjs/sui";
-import { getItsCoin } from "./sui/coin";
-import { calculateEstimatedFee } from "./common/gasEstimation";
-import { environment } from "./common/env";
-import { convertAddress, convertAddressForXrpl } from "./sui/utils";
+import { getItsCoin } from "sui/coin";
+import { calculateEstimatedFee } from "common/gasEstimation";
+import { environment } from "common/env";
+import { convertAddress, convertAddressForXrpl } from "sui/utils";
 import { bcs } from "@mysten/sui/bcs";
 
 // --- Constants ---
@@ -39,10 +39,11 @@ const CLOCK_PACKAGE_ID = "0x6";
 
 // --- Main Execution ---
 (async () => {
-  const chainConfig = await getSuiChainConfig();
-  const contracts = chainConfig.config.contracts;
+  const suiChainConfig = await getChainConfig("sui");
+  const destinationChainConfig = await getChainConfig(DESTINATION_CHAIN);
+  const contracts = suiChainConfig.config.contracts;
 
-  const suiClient = new SuiClient({ url: chainConfig.config.rpc[0] });
+  const suiClient = new SuiClient({ url: suiChainConfig.config.rpc[0] });
   const suiWallet = getSuiKeypair();
   const walletAddress = suiWallet.toSuiAddress();
 
@@ -61,17 +62,20 @@ const CLOCK_PACKAGE_ID = "0x6";
     gasService: contracts.GasService.objects.GasService,
   };
 
-  const fee = await calculateEstimatedFee("sui", DESTINATION_CHAIN);
+  const fee = await calculateEstimatedFee("sui", destinationChainConfig);
   console.log("Estimated Fee:", `${formatUnits(fee, 9)} SUI`);
 
   console.log(
-    `Sending ${formatUnits(UNIT_AMOUNT, 9)} ${TOKEN_SYMBOL} to ${DESTINATION_ADDRESS} on ${DESTINATION_CHAIN}`,
+    `Sending ${formatUnits(
+      UNIT_AMOUNT,
+      9
+    )} ${TOKEN_SYMBOL} to ${DESTINATION_ADDRESS} on ${DESTINATION_CHAIN}`
   );
 
   const itsCoinObjectId = await getItsCoin(
     suiClient,
     walletAddress,
-    ITS_TOKEN_TYPE,
+    ITS_TOKEN_TYPE
   );
 
   // Create a new transaction block
@@ -104,7 +108,7 @@ const CLOCK_PACKAGE_ID = "0x6";
         tx.pure(emptyMetadata),
         channel,
       ],
-      [ITS_TOKEN_TYPE],
+      [ITS_TOKEN_TYPE]
     );
 
   // Send interchain transfer
@@ -112,14 +116,14 @@ const CLOCK_PACKAGE_ID = "0x6";
     InterchainTokenService.interchain_token_service.builder.sendInterchainTransfer(
       tx,
       [objectIds.its, ticket, CLOCK_PACKAGE_ID],
-      [ITS_TOKEN_TYPE],
+      [ITS_TOKEN_TYPE]
     );
 
   // Pay gas for the transfer
   GasService.gas_service.builder.payGas(
     tx,
     [objectIds.gasService, messageTicket, gas, walletAddress, tx.object("0x")],
-    ["0x2::sui::SUI"],
+    ["0x2::sui::SUI"]
   );
 
   // Send the message
@@ -143,6 +147,6 @@ const CLOCK_PACKAGE_ID = "0x6";
 
   console.log(
     "Transaction Hash:",
-    `${chainConfig.blockExplorers[0].url}/tx/${response.digest}`,
+    `${suiChainConfig.blockExplorers[0].url}/tx/${response.digest}`
   );
 })();

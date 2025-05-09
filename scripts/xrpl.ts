@@ -1,26 +1,18 @@
-import { getChainConfig, getXrplChainConfig } from "./common/chains";
-import { calculateEstimatedFee } from "./common/gasEstimation";
-import { signAndSubmitTx } from "./xrpl/tx";
-import { getBalances, hex, parseToken } from "./xrpl/utils";
-import { fundWallet, getWallet } from "./xrpl/wallet";
+import { getChainConfig } from "common/chains";
+import { calculateEstimatedFee } from "common/gasEstimation";
+import { signAndSubmitTx } from "xrpl/tx";
+import { getBalances, hex, parseToken } from "xrpl/utils";
+import { fundWallet, getWallet } from "xrpl/wallet";
 import xrpl from "xrpl";
-import { environment } from "./common/env";
-import {
-  AbiCoder,
-  concat,
-  getBytes,
-  hexlify,
-  randomBytes,
-  zeroPadBytes,
-} from "ethers";
-import { zeroPadValue } from "ethers";
+import { environment } from "common/env";
+import { generateSquidEvmPayload } from "common/squid";
 
 // Parse command line arguments
 const destinationAddress =
   process.argv[2] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
-const destinationChain = process.argv[3] || "ethereum-sepolia";
-const tokenSymbol = process.argv[4] || "SQD";
-const transferAmount = process.argv[5] || "1";
+const destinationChain = process.argv[3] || "xrpl-evm";
+const tokenSymbol = process.argv[4] || "XRP";
+const transferAmount = process.argv[5] || "2";
 const xrplWalletSeed = process.env.XRPL_SEED || "";
 
 console.log("Environment:", environment);
@@ -40,23 +32,15 @@ if (!transferAmount) {
 }
 
 // Get axelar chain config from s3
-const xrplChainConfig = await getXrplChainConfig();
-const chainConfigs = await getChainConfig();
+const xrplChainConfig = await getChainConfig("xrpl");
+const destinationChainConfig = await getChainConfig(destinationChain);
 
-const destinationChainType = chainConfigs.chains[destinationChain].chainType;
-let payload;
+const destinationChainType = destinationChainConfig.chainType;
 
-const isEvmDestination = destinationChainType === "evm";
-
-if (isEvmDestination) {
-  const squidPayload = AbiCoder.defaultAbiCoder().encode(
-    ["address", "bytes32"],
-    [destinationAddress, hexlify(randomBytes(32))],
-  );
-  const metadataVersionBytes = hexlify("0x");
-
-  payload = concat([getBytes(metadataVersionBytes), getBytes(squidPayload)]);
-}
+const payload =
+  destinationChainType === "evm"
+    ? generateSquidEvmPayload(destinationAddress)
+    : undefined;
 
 const itsContractAddress =
   xrplChainConfig.config.contracts.InterchainTokenService.address;
@@ -81,7 +65,7 @@ await client.connect();
 const balances = await getBalances(
   client,
   wallet.address,
-  itsContractAddress,
+  itsContractAddress
 ).catch(() => [
   {
     symbol: "XRP",
@@ -109,7 +93,7 @@ if (parseInt(xrpBalance.value) < 5) {
   const [updatedXrpBalance] = await getBalances(
     client,
     wallet.address,
-    itsContractAddress,
+    itsContractAddress
   );
   console.log("XRP Balance:", xrpl.dropsToXrp(updatedXrpBalance.value), "XRP");
 }
@@ -124,7 +108,7 @@ const squidEvmContractAddress = "0x9bEb991eDdF92528E6342Ec5f7B0846C24cbaB58";
 // 61d56768967a50c3f05f6ec710f7fb92824d73842796efd55dd157d98d68bf87: 775.0 # WETH
 let fee = "1";
 if (tokenSymbol === "XRP") {
-  fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChain);
+  fee = await calculateEstimatedFee(xrplChainConfig.id, destinationChainConfig);
   console.log("Estimated Fee:", `${xrpl.dropsToXrp(fee)} XRP`);
 }
 
@@ -141,23 +125,23 @@ const Memos = [
     Memo: {
       MemoType: hex("destination_address"),
       MemoData: hex(
-        (isEvmDestination
-          ? squidEvmContractAddress
-          : destinationAddress
-        ).replace("0x", ""),
+        (payload ? squidEvmContractAddress : destinationAddress).replace(
+          "0x",
+          ""
+        )
       ),
     },
   },
   {
     Memo: {
       MemoType: hex("destination_chain"),
-      MemoData: hex(destinationChain),
+      MemoData: hex(destinationChainConfig.id),
     },
   },
   {
     Memo: {
       MemoType: hex("gas_fee_amount"),
-      MemoData: hex(fee),
+      MemoData: hex(fee.toString()),
     },
   },
 ];
