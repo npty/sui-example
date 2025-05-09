@@ -10,21 +10,24 @@ export type HopParams = {
 
 // These values are pulled from the average gas used of interchain transfer for each chain and round up it a bit more
 // See https://github.com/axelarnetwork/axelarjs-sdk/pull/358#discussion_r2072342064
-export function getGasLimit(chainType: string): string {
+export function getGasLimit(chainConfig: BaseChainConfig): string {
   if (environment === "testnet") {
-    switch (chainType) {
+    switch (chainConfig.chainType) {
       case "sui":
         return "2750";
       case "xrpl":
         return "165000";
       case "stellar":
         return "8000000";
+      case "xrpl-evm":
       // set average gas used for evm chains to 500k for now. this is not accurate but it's good enough for now as we are focusing on amplifier chains here
       default:
-        return "500000";
+        // evm chain type fall into this case
+        if (chainConfig.id.includes("xrpl-evm")) return "3500000";
+        else return "500000";
     }
   } else {
-    switch (chainType) {
+    switch (chainConfig.chainType) {
       case "sui":
         return "70000";
       case "xrpl":
@@ -32,7 +35,8 @@ export function getGasLimit(chainType: string): string {
       case "stellar":
         return "8000000";
       default:
-        return "500000";
+        if (chainConfig.id.includes("xrpl-evm")) return "3500000";
+        else return "500000";
     }
   }
 }
@@ -45,7 +49,7 @@ export async function calculateEstimatedFee(
     environment,
   });
 
-  const destChainGasLimit = getGasLimit(destinationChainConfig.chainType);
+  const destChainGasLimit = getGasLimit(destinationChainConfig);
 
   const hopParams: HopParams[] = [
     {

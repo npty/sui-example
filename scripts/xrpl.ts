@@ -10,9 +10,9 @@ import { generateSquidEvmPayload } from "common/squid";
 // Parse command line arguments
 const destinationAddress =
   process.argv[2] || "0xA57ADCE1d2fE72949E4308867D894CD7E7DE0ef2";
-const destinationChain = process.argv[3] || "ethereum-sepolia";
-const tokenSymbol = process.argv[4] || "SQD";
-const transferAmount = process.argv[5] || "1";
+const destinationChain = process.argv[3] || "xrpl-evm";
+const tokenSymbol = process.argv[4] || "XRP";
+const transferAmount = process.argv[5] || "2";
 const xrplWalletSeed = process.env.XRPL_SEED || "";
 
 console.log("Environment:", environment);
