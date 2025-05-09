@@ -135,13 +135,13 @@ const Memos = [
   {
     Memo: {
       MemoType: hex("destination_chain"),
-      MemoData: hex(destinationChain),
+      MemoData: hex(destinationChainConfig.id),
     },
   },
   {
     Memo: {
       MemoType: hex("gas_fee_amount"),
-      MemoData: hex(fee),
+      MemoData: hex(fee.toString()),
     },
   },
 ];
